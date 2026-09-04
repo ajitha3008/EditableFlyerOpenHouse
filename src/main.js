@@ -215,6 +215,23 @@ function fitLines(ctx, text, maxWidth, maxLines, maxSize, minSize, family, weigh
   return { lines: visible, size: minSize };
 }
 
+function fitCompleteTextBlock(ctx, text, maxWidth, maxHeight, maxSize, family, weight = 400, lineHeightRatio = 1.28) {
+  const hardMinimum = 12;
+  for (let size = maxSize; size >= hardMinimum; size -= 1) {
+    ctx.font = `${weight} ${size}px ${family}`;
+    const lines = wrapText(ctx, text, maxWidth);
+    const lineHeight = size * lineHeightRatio;
+    if (lines.length * lineHeight <= maxHeight) return { lines, size, lineHeight };
+  }
+
+  ctx.font = `${weight} ${hardMinimum}px ${family}`;
+  return {
+    lines: wrapText(ctx, text, maxWidth),
+    size: hardMinimum,
+    lineHeight: hardMinimum * lineHeightRatio,
+  };
+}
+
 function drawOpenHouseClubName(clubName) {
   if (!clubName) return;
   const family = '"Arial Narrow", "Roboto Condensed", Impact, sans-serif';
@@ -372,15 +389,15 @@ function drawParticipantPhoto(ctx) {
 
 function drawTestimonialCard(ctx) {
   ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.24)'; ctx.shadowBlur = 28; ctx.shadowOffsetY = 16; ctx.fillStyle = '#fff';
-  roundedRect(ctx, 310, 438, 824, 650, 55); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(725, 1070); ctx.lineTo(706, 1176); ctx.lineTo(838, 1081); ctx.closePath(); ctx.fill(); ctx.restore();
+  roundedRect(ctx, 310, 438, 824, 700, 55); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(725, 1120); ctx.lineTo(706, 1210); ctx.lineTo(845, 1131); ctx.closePath(); ctx.fill(); ctx.restore();
 }
 
 function drawTestimonialText(ctx, values) {
   const family = 'Arial, Helvetica, sans-serif';
   ctx.save(); ctx.fillStyle = '#a20d25'; ctx.font = '800 108px Georgia, serif'; ctx.fillText('“', 507, 594);
-  const quoteFit = fitLines(ctx, values.testimonial, 500, 6, 45, 31, family, 400);
-  const quoteLineHeight = quoteFit.size * 1.28;
+  const quoteFit = fitCompleteTextBlock(ctx, values.testimonial, 500, 285, 45, family, 400);
+  const quoteLineHeight = quoteFit.lineHeight;
   ctx.fillStyle = '#101114'; ctx.font = `400 ${quoteFit.size}px ${family}`; ctx.textAlign = 'left';
   let quoteY = 615;
   quoteFit.lines.forEach((line) => { ctx.fillText(line, 568, quoteY); quoteY += quoteLineHeight; });
@@ -395,11 +412,14 @@ function drawTestimonialText(ctx, values) {
   ctx.stroke();
   const nameFit = fitLines(ctx, values.participantName.toUpperCase(), 510, 2, 40, 27, 'Arial, sans-serif', 800);
   ctx.fillStyle = '#062d4e'; ctx.font = `800 ${nameFit.size}px Arial, sans-serif`;
-  let nameY = 988;
-  nameFit.lines.forEach((line) => { ctx.fillText(line, 568, nameY); nameY += nameFit.size * 1.08; });
+  const nameLineHeight = nameFit.size * 1.08;
+  const nameStartY = 982;
+  let nameY = nameStartY;
+  nameFit.lines.forEach((line) => { ctx.fillText(line, 568, nameY); nameY += nameLineHeight; });
   const roleFit = fitLines(ctx, values.designation, 510, 2, 27, 19, family, 400);
   ctx.fillStyle = '#15161a'; ctx.font = `400 ${roleFit.size}px ${family}`;
-  let roleY = Math.max(1032, nameY + 3);
+  const lastNameBaseline = nameStartY + Math.max(0, nameFit.lines.length - 1) * nameLineHeight;
+  let roleY = lastNameBaseline + roleFit.size * 1.2 + 14;
   roleFit.lines.forEach((line) => { ctx.fillText(line, 568, roleY); roleY += roleFit.size * 1.14; });
   ctx.restore();
 }
@@ -424,7 +444,7 @@ function renderTestimonial() {
   drawTestimonialCard(testimonialCtx);
   drawParticipantPhoto(testimonialCtx);
   drawTestimonialText(testimonialCtx, values);
-  testimonialCtx.save(); testimonialCtx.fillStyle = '#fff'; testimonialCtx.font = '800 38px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'CGD TEAM', 1073, 1158, 2.3); testimonialCtx.fillStyle = '#f6cf61'; testimonialCtx.font = '800 27px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'DISTRICT 86', 1092, 1199, 2.2); testimonialCtx.font = '800 19px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, '2026-2027', 1092, 1233, 2); testimonialCtx.restore();
+  testimonialCtx.save(); testimonialCtx.fillStyle = '#fff'; testimonialCtx.font = '800 35px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'CGD TEAM', 1080, 1180, 2.2); testimonialCtx.fillStyle = '#f6cf61'; testimonialCtx.font = '800 24px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'DISTRICT 86', 1092, 1213, 2); testimonialCtx.font = '800 17px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, '2026-2027', 1092, 1241, 1.8); testimonialCtx.restore();
 }
 
 function updateCounter(input, field) {
