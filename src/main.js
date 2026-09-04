@@ -2,10 +2,14 @@ import './styles.css';
 
 const OPEN_HOUSE_TEMPLATE_URL = '/toastmasters-open-house-template.png';
 const TOASTMASTERS_LOGO_URL = '/toastmasters-international-logo.png';
+const CERTIFICATE_TEMPLATE_URL = '/toastimonies-certificate-template.png';
 const OPEN_HOUSE_WIDTH = 1003;
 const OPEN_HOUSE_HEIGHT = 1568;
 const TESTIMONIAL_SIZE = 1254;
+const CERTIFICATE_WIDTH = 1463;
+const CERTIFICATE_HEIGHT = 1075;
 const TESTIMONIAL_PASSWORD = 'aurie26retention';
+const PROTECTED_FLYERS = new Set(['testimonial', 'certificate']);
 
 const openHouseInitial = {
   club: 'Lakeshore Speakers Club',
@@ -20,6 +24,10 @@ const testimonialInitial = {
   designation: 'Designation / Toastmasters Role',
 };
 
+const certificateInitial = {
+  certificateName: 'Participant Name',
+};
+
 const openHouseFields = [
   { id: 'club', label: 'Club name', max: 70, hint: 'Shown prominently in the central space. Wraps to 3 lines.', placeholder: 'e.g. Lakeshore Speakers Club' },
   { id: 'date', label: 'Open house date', max: 35, hint: 'Use a friendly format, such as Saturday, September 12, 2026.', placeholder: 'e.g. Saturday, September 12, 2026' },
@@ -31,6 +39,10 @@ const testimonialFields = [
   { id: 'testimonial', label: 'Testimonial', max: 220, hint: 'A concise, authentic message works best. Text fits automatically.', placeholder: 'Share the participant’s Toastmasters experience.', multiline: true },
   { id: 'participantName', label: 'Participant name', max: 45, hint: 'Displayed in uppercase beneath the quote.', placeholder: 'e.g. Priya Sharma' },
   { id: 'designation', label: 'Designation / Toastmasters role', max: 65, hint: 'Add a professional title, club role, or both.', placeholder: 'e.g. VP Education · Lakeshore Speakers' },
+];
+
+const certificateFields = [
+  { id: 'certificateName', label: 'Participant name', max: 50, hint: 'This is the only content changed on the certificate.', placeholder: 'e.g. Priya Sharma' },
 ];
 
 function fieldMarkup(field, values) {
@@ -73,6 +85,9 @@ document.querySelector('#app').innerHTML = `
       <button class="flyer-tab" type="button" role="tab" id="testimonial-tab" aria-selected="false" aria-controls="testimonial-view" data-tab="testimonial" tabindex="-1">
         <span class="tab-icon" aria-hidden="true">02</span><span><strong>Testimonials</strong><small>Password protected</small></span>
       </button>
+      <button class="flyer-tab" type="button" role="tab" id="certificate-tab" aria-selected="false" aria-controls="certificate-view" data-tab="certificate" tabindex="-1">
+        <span class="tab-icon" aria-hidden="true">03</span><span><strong>Certificates</strong><small>Password protected</small></span>
+      </button>
     </nav>
 
     <section class="workspace flyer-view" id="open-house-view" role="tabpanel" aria-labelledby="open-house-tab" data-view="open-house">
@@ -88,7 +103,7 @@ document.querySelector('#app').innerHTML = `
         </form>
       </aside>
       <section class="preview-panel" aria-labelledby="open-house-preview-title">
-        <div class="preview-heading"><div><span class="step">02</span><h2 id="open-house-preview-title">Live preview</h2></div><span class="size-badge">1003 × 1568 px</span></div>
+        <div class="preview-heading"><div><span class="step">01</span><h2 id="open-house-preview-title">Live preview</h2></div><span class="size-badge">1003 × 1568 px</span></div>
         <div class="canvas-shell portrait-canvas">
           <div class="loading-state" id="open-house-loading"><span></span>Preparing your flyer…</div>
           <canvas id="open-house-canvas" width="1003" height="1568" aria-label="Preview of your personalized Toastmasters open house flyer"></canvas>
@@ -99,7 +114,7 @@ document.querySelector('#app').innerHTML = `
 
     <section class="workspace flyer-view" id="testimonial-view" role="tabpanel" aria-labelledby="testimonial-tab" data-view="testimonial" hidden>
       <aside class="editor-panel" aria-label="Testimonial flyer details">
-        <div class="panel-heading testimonial-heading"><span class="step">01</span><div><h2>Participant story</h2><p>Personalize the portrait and testimonial.</p></div></div>
+        <div class="panel-heading testimonial-heading"><span class="step">02</span><div><h2>Participant story</h2><p>Personalize the portrait and testimonial.</p></div></div>
         <form id="testimonial-form">
           <div class="field-group">
             <div class="label-row"><label for="participant-photo">Participant photo</label><span class="optional-label">JPG, PNG or WebP</span></div>
@@ -124,6 +139,28 @@ document.querySelector('#app').innerHTML = `
         <div class="preview-heading"><div><span class="step">02</span><h2 id="testimonial-preview-title">Live preview</h2></div><span class="size-badge">1254 × 1254 px</span></div>
         <div class="canvas-shell square-canvas"><canvas class="is-ready" id="testimonial-canvas" width="1254" height="1254" aria-label="Preview of your personalized Toastmasters testimonial flyer"></canvas></div>
         <div class="preview-footer"><p><span aria-hidden="true">✓</span> Editable portrait</p><p><span aria-hidden="true">✓</span> Social-ready square</p><p><span aria-hidden="true">✓</span> No data uploaded</p></div>
+      </section>
+    </section>
+
+    <section class="workspace flyer-view" id="certificate-view" role="tabpanel" aria-labelledby="certificate-tab" data-view="certificate" hidden>
+      <aside class="editor-panel" aria-label="Certificate details">
+        <div class="panel-heading certificate-heading"><span class="step">03</span><div><h2>Certificate recipient</h2><p>Only the participant name is editable.</p></div></div>
+        <form id="certificate-form">
+          ${certificateFields.map((field) => fieldMarkup(field, certificateInitial)).join('')}
+          <div class="format-note certificate-note"><span aria-hidden="true">✦</span><p><strong>Original artwork preserved</strong>The supplied design, signatures, borders, logos, and wording remain unchanged.</p></div>
+          <div class="actions">
+            <button class="button button-primary" type="submit"><span>Download Certificate</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14"/></svg></button>
+            <button class="button button-secondary" type="button" id="certificate-reset">Reset</button>
+          </div>
+        </form>
+      </aside>
+      <section class="preview-panel" aria-labelledby="certificate-preview-title">
+        <div class="preview-heading"><div><span class="step">03</span><h2 id="certificate-preview-title">Live preview</h2></div><span class="size-badge">1463 × 1075 px</span></div>
+        <div class="canvas-shell landscape-canvas">
+          <div class="loading-state" id="certificate-loading"><span></span>Preparing your certificate…</div>
+          <canvas id="certificate-canvas" width="1463" height="1075" aria-label="Preview of the personalized Toastimonies certificate of participation"></canvas>
+        </div>
+        <div class="preview-footer"><p><span aria-hidden="true">✓</span> Original signatures</p><p><span aria-hidden="true">✓</span> Editable recipient</p><p><span aria-hidden="true">✓</span> High-resolution PNG</p></div>
       </section>
     </section>
   </main>
@@ -159,14 +196,19 @@ const openHouseCanvas = document.querySelector('#open-house-canvas');
 const openHouseCtx = openHouseCanvas.getContext('2d');
 const testimonialCanvas = document.querySelector('#testimonial-canvas');
 const testimonialCtx = testimonialCanvas.getContext('2d');
+const certificateCanvas = document.querySelector('#certificate-canvas');
+const certificateCtx = certificateCanvas.getContext('2d');
 const openHouseTemplate = new Image();
 const toastmastersLogo = new Image();
+const certificateTemplate = new Image();
 let openHouseTemplateReady = false;
 let toastmastersLogoReady = false;
+let certificateTemplateReady = false;
 let participantImage = null;
 let participantImageUrl = '';
 let activeFlyer = 'open-house';
-let testimonialUnlocked = false;
+let protectedFlyersUnlocked = false;
+let pendingFlyer = 'testimonial';
 
 function valuesFromFields(fields) {
   return Object.fromEntries(fields.map(({ id }) => [id, document.querySelector(`#${id}`).value.trim()]));
@@ -447,6 +489,28 @@ function renderTestimonial() {
   testimonialCtx.save(); testimonialCtx.fillStyle = '#fff'; testimonialCtx.font = '800 35px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'CGD TEAM', 1080, 1180, 2.2); testimonialCtx.fillStyle = '#f6cf61'; testimonialCtx.font = '800 24px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'DISTRICT 86', 1092, 1213, 2); testimonialCtx.font = '800 17px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, '2026-2027', 1092, 1241, 1.8); testimonialCtx.restore();
 }
 
+function renderCertificate() {
+  if (!certificateTemplateReady) return;
+  const { certificateName } = valuesFromFields(certificateFields);
+  certificateCtx.clearRect(0, 0, CERTIFICATE_WIDTH, CERTIFICATE_HEIGHT);
+  certificateCtx.drawImage(certificateTemplate, 0, 0, CERTIFICATE_WIDTH, CERTIFICATE_HEIGHT);
+
+  // Stretch a clean strip of the original paper texture over only the template name.
+  // Everything else—including both signatures—remains untouched source artwork.
+  certificateCtx.drawImage(certificateTemplate, 470, 474, 900, 18, 470, 493, 900, 108);
+
+  if (!certificateName) return;
+  const nameFamily = '"Times New Roman", Georgia, serif';
+  const nameFit = fitLines(certificateCtx, certificateName.toUpperCase(), 830, 1, 78, 28, nameFamily, 400);
+  certificateCtx.save();
+  certificateCtx.fillStyle = '#082b5b';
+  certificateCtx.font = `400 ${nameFit.size}px ${nameFamily}`;
+  certificateCtx.textAlign = 'center';
+  certificateCtx.textBaseline = 'alphabetic';
+  certificateCtx.fillText(nameFit.lines[0] || '', 927, 580);
+  certificateCtx.restore();
+}
+
 function updateCounter(input, field) {
   const counter = document.querySelector(`#${input.id}-counter`);
   counter.textContent = `${input.value.length} / ${field.max}`;
@@ -477,12 +541,12 @@ function showToast(message) {
   window.setTimeout(() => toast.classList.remove('show'), 2800);
 }
 
-function downloadCanvas(canvas, filename) {
+function downloadCanvas(canvas, filename, message = 'Your flyer has been downloaded.') {
   const link = document.createElement('a');
   link.download = filename;
   link.href = canvas.toDataURL('image/png');
   link.click();
-  showToast('Your flyer has been downloaded.');
+  showToast(message);
 }
 
 function slugify(value, fallback) {
@@ -499,23 +563,28 @@ function switchFlyer(nextFlyer) {
   });
   document.querySelectorAll('[data-view]').forEach((view) => { view.hidden = view.dataset.view !== nextFlyer; });
   if (nextFlyer === 'testimonial') renderTestimonial();
+  if (nextFlyer === 'certificate') renderCertificate();
 }
 
 function closeTestimonialGate() {
   document.querySelector('#testimonial-gate').hidden = true;
   document.body.classList.remove('dialog-open');
   document.querySelector('#password-error').textContent = '';
-  document.querySelector('#testimonial-tab').focus();
+  document.querySelector(`[data-tab="${pendingFlyer}"]`).focus();
 }
 
 function requestFlyer(nextFlyer) {
-  if (nextFlyer !== 'testimonial' || testimonialUnlocked) {
+  if (!PROTECTED_FLYERS.has(nextFlyer) || protectedFlyersUnlocked) {
     switchFlyer(nextFlyer);
     return;
   }
 
+  pendingFlyer = nextFlyer;
   const gate = document.querySelector('#testimonial-gate');
   const passwordInput = document.querySelector('#testimonial-password');
+  const flyerLabel = nextFlyer === 'certificate' ? 'Certificates' : 'Testimonials';
+  document.querySelector('#gate-title').textContent = `Unlock ${flyerLabel}`;
+  document.querySelector('#gate-description').textContent = `Enter the password to open the ${flyerLabel.toLowerCase()} editor.`;
   gate.hidden = false;
   document.body.classList.add('dialog-open');
   passwordInput.value = '';
@@ -525,15 +594,19 @@ function requestFlyer(nextFlyer) {
 
 bindFields(openHouseFields, renderOpenHouse);
 bindFields(testimonialFields, renderTestimonial);
+bindFields(certificateFields, renderCertificate);
 
 document.querySelectorAll('[data-tab]').forEach((tab) => {
   tab.addEventListener('click', () => requestFlyer(tab.dataset.tab));
   tab.addEventListener('keydown', (event) => {
     if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
     event.preventDefault();
-    const next = activeFlyer === 'open-house' ? 'testimonial' : 'open-house';
+    const tabs = [...document.querySelectorAll('[data-tab]')];
+    const currentIndex = tabs.findIndex((candidate) => candidate.dataset.tab === activeFlyer);
+    const direction = event.key === 'ArrowRight' ? 1 : -1;
+    const next = tabs[(currentIndex + direction + tabs.length) % tabs.length].dataset.tab;
     requestFlyer(next);
-    if (next !== 'testimonial' || testimonialUnlocked) document.querySelector(`[data-tab="${next}"]`).focus();
+    if (!PROTECTED_FLYERS.has(next) || protectedFlyersUnlocked) document.querySelector(`[data-tab="${next}"]`).focus();
   });
 });
 
@@ -541,10 +614,11 @@ document.querySelector('#testimonial-gate-form').addEventListener('submit', (eve
   event.preventDefault();
   const passwordInput = document.querySelector('#testimonial-password');
   if (passwordInput.value === TESTIMONIAL_PASSWORD) {
-    testimonialUnlocked = true;
+    protectedFlyersUnlocked = true;
+    const unlockedFlyer = pendingFlyer;
     closeTestimonialGate();
-    switchFlyer('testimonial');
-    document.querySelector('#testimonial-tab').focus();
+    switchFlyer(unlockedFlyer);
+    document.querySelector(`[data-tab="${unlockedFlyer}"]`).focus();
     return;
   }
 
@@ -585,6 +659,21 @@ toastmastersLogo.onerror = () => {
 
 toastmastersLogo.src = TOASTMASTERS_LOGO_URL;
 
+certificateTemplate.onload = () => {
+  certificateTemplateReady = true;
+  document.querySelector('#certificate-loading').hidden = true;
+  certificateCanvas.classList.add('is-ready');
+  renderCertificate();
+};
+
+certificateTemplate.onerror = () => {
+  const loading = document.querySelector('#certificate-loading');
+  loading.innerHTML = '<strong>Certificate template could not be loaded.</strong><br>Please refresh the page.';
+  loading.classList.add('error');
+};
+
+certificateTemplate.src = CERTIFICATE_TEMPLATE_URL;
+
 document.querySelector('#open-house-form').addEventListener('submit', (event) => {
   event.preventDefault();
   if (!event.currentTarget.reportValidity() || !openHouseTemplateReady) return;
@@ -599,7 +688,15 @@ document.querySelector('#testimonial-form').addEventListener('submit', (event) =
   downloadCanvas(testimonialCanvas, `${slugify(document.querySelector('#participantName').value, 'participant')}-testimonial.png`);
 });
 
+document.querySelector('#certificate-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!event.currentTarget.reportValidity() || !certificateTemplateReady) return;
+  renderCertificate();
+  downloadCanvas(certificateCanvas, `${slugify(document.querySelector('#certificateName').value, 'participant')}-toastimonies-certificate.png`, 'Your certificate has been downloaded.');
+});
+
 document.querySelector('#open-house-reset').addEventListener('click', () => resetFields(openHouseFields, openHouseInitial, renderOpenHouse));
+document.querySelector('#certificate-reset').addEventListener('click', () => resetFields(certificateFields, certificateInitial, renderCertificate));
 
 function clearParticipantPhoto() {
   if (participantImageUrl) URL.revokeObjectURL(participantImageUrl);

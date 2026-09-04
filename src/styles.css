@@ -509,6 +509,12 @@ textarea:focus {
     linear-gradient(140deg, var(--navy) 0 68%, #8d0b21 68% 100%);
 }
 
+.certificate-heading {
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.04), transparent 35%),
+    linear-gradient(140deg, var(--navy) 0 72%, #b68222 72% 100%);
+}
+
 .testimonial-note > span {
   font-size: 28px;
   line-height: 1;
@@ -661,6 +667,10 @@ textarea:focus {
 
 .square-canvas {
   max-width: 760px;
+}
+
+.landscape-canvas {
+  width: min(100%, 900px);
 }
 
 canvas {
@@ -971,7 +981,19 @@ body.dialog-open {
   .flyer-tab {
     flex: 1;
     min-width: 0;
-    padding-right: 10px;
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px 5px;
+    text-align: center;
+  }
+
+  .flyer-tab strong {
+    font-size: 10px;
+  }
+
+  .tab-icon {
+    width: 29px;
+    height: 29px;
   }
 
   .flyer-tab small {
