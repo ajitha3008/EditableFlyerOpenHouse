@@ -384,8 +384,9 @@ function drawTestimonialText(ctx, values) {
   ctx.fillStyle = '#101114'; ctx.font = `400 ${quoteFit.size}px ${family}`; ctx.textAlign = 'left';
   let quoteY = 615;
   quoteFit.lines.forEach((line) => { ctx.fillText(line, 568, quoteY); quoteY += quoteLineHeight; });
+  const finalQuoteLineWidth = ctx.measureText(quoteFit.lines.at(-1) || '').width;
   ctx.fillStyle = '#a20d25'; ctx.font = `700 ${Math.max(35, quoteFit.size)}px Georgia, serif`;
-  ctx.fillText('”', 568 + Math.min(470, ctx.measureText(quoteFit.lines.at(-1) || '').width + 8), quoteY - quoteLineHeight + 2);
+  ctx.fillText('”', 568 + finalQuoteLineWidth + 14, quoteY - quoteLineHeight + 2);
   ctx.strokeStyle = '#e4ac32';
   ctx.lineWidth = 3;
   ctx.beginPath();
