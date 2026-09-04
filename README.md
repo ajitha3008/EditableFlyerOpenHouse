@@ -2,6 +2,8 @@
 
 A browser-based flyer generator that overlays club and event details on the supplied Toastmasters open house template. The finished 1003 × 1568 flyer downloads as a high-resolution PNG.
 
+For an implementation walkthrough, rendering details, system diagrams, deployment architecture, limitations, and extension guidance, see [Technical Architecture](docs/TECHNICAL_ARCHITECTURE.md).
+
 ## Character limits
 
 | Field | Maximum | Flyer behavior |
