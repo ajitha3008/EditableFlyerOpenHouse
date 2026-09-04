@@ -386,7 +386,6 @@ function drawTestimonialText(ctx, values) {
   quoteFit.lines.forEach((line) => { ctx.fillText(line, 568, quoteY); quoteY += quoteLineHeight; });
   ctx.fillStyle = '#a20d25'; ctx.font = `700 ${Math.max(35, quoteFit.size)}px Georgia, serif`;
   ctx.fillText('”', 568 + Math.min(470, ctx.measureText(quoteFit.lines.at(-1) || '').width + 8), quoteY - quoteLineHeight + 2);
-  ctx.strokeStyle = '#e4ac32'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(568, 908); ctx.lineTo(690, 908); ctx.stroke();
   const nameFit = fitLines(ctx, values.participantName.toUpperCase(), 510, 2, 40, 27, 'Arial, sans-serif', 800);
   ctx.fillStyle = '#062d4e'; ctx.font = `800 ${nameFit.size}px Arial, sans-serif`;
   let nameY = 988;
