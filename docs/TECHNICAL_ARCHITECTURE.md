@@ -94,7 +94,9 @@ The number badges are identifiers rather than workflow-step numbers: both panels
 
 ## 7. Password-gate behavior
 
-Protected tabs open an accessible modal dialog before their panel is shown. The dialog supports Submit, Cancel, backdrop dismissal, and Escape. Incorrect values display inline feedback and retain focus in the password field.
+The top-level `REQUIRE_TAB_PASSWORDS` configuration constant controls all client-side tab gates and defaults to `false`. In that default state, tabs 2–4 open directly and display `Ready to edit` in their navigation subtitles. Setting the constant to `true` and rebuilding enables password gating and changes those subtitles to `Password protected`.
+
+When enabled, protected tabs open an accessible modal dialog before their panel is shown. The dialog supports Submit, Cancel, backdrop dismissal, and Escape. Incorrect values display inline feedback and retain focus in the password field.
 
 Unlock state is held in the in-memory `unlockedProtectedFlyers` set. It is not written to cookies, local storage, or session storage and therefore resets on refresh.
 
@@ -292,7 +294,7 @@ Before deployment:
 2. Run `npm run build`.
 3. Confirm all three PNG assets load from the production preview.
 4. Verify tab identifiers `01` through `04` in both editor and preview headings.
-5. Test valid and invalid values for both password groups.
+5. With `REQUIRE_TAB_PASSWORDS = false`, confirm tabs 2–4 open directly; then test a `true` build with valid and invalid values for both password groups.
 6. Verify Testimonials displays all 220 characters without an ellipsis.
 7. Test Multi Monies counts 1 through 8 and confirm the same number of editor accordions and canvas bubbles.
 8. Enter 260 characters in every visible Multi Monies comment and confirm complete rendering.

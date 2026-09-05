@@ -13,14 +13,14 @@ For implementation details, rendering rules, architecture diagrams, security lim
 
 ## Access
 
-The protected editors use client-side password gates:
+Password gating for tabs 2–4 is controlled by the top-level `REQUIRE_TAB_PASSWORDS` boolean in `src/main.js`. Its default is `false`, so all four tabs open directly. Set it to `true` and rebuild to enable the client-side password gates below:
 
 | Editor | Password | Unlock scope |
 | --- | --- | --- |
 | Testimonials and Certificates | `aurie26retention` | Entering the password unlocks both tabs until refresh |
 | Multi Monies | `chrismonies` | Unlocks Multi Monies until refresh |
 
-These hardcoded browser-side passwords deter casual access only. They are visible in the shipped JavaScript and are not a substitute for server-side authentication.
+When gating is enabled, these hardcoded browser-side passwords deter casual access only. They are visible in the shipped JavaScript and are not a substitute for server-side authentication. The tab subtitles automatically switch between `Ready to edit` and `Password protected` to reflect the configured state.
 
 ## Editable fields and limits
 

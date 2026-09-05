@@ -10,9 +10,11 @@ const CERTIFICATE_WIDTH = 1463;
 const CERTIFICATE_HEIGHT = 1075;
 const MULTI_MONIES_WIDTH = 2550;
 const MULTI_MONIES_HEIGHT = 3300;
+const REQUIRE_TAB_PASSWORDS = false;
 const TESTIMONIAL_PASSWORD = 'aurie26retention';
 const MULTI_MONIES_PASSWORD = 'chrismonies';
 const PROTECTED_FLYERS = new Set(['testimonial', 'certificate', 'multi-monies']);
+const protectedTabStatus = REQUIRE_TAB_PASSWORDS ? 'Password protected' : 'Ready to edit';
 const BRAND_HEADING_FONT = '"Montserrat", "Arial Black", Arial, sans-serif';
 const BRAND_BODY_FONT = '"Source Sans 3", "Source Sans Pro", Arial, sans-serif';
 const brandFontsReady = document.fonts
@@ -116,13 +118,13 @@ document.querySelector('#app').innerHTML = `
         <span class="tab-icon" aria-hidden="true">01</span><span><strong>Open House</strong><small>Event invitation</small></span>
       </button>
       <button class="flyer-tab" type="button" role="tab" id="testimonial-tab" aria-selected="false" aria-controls="testimonial-view" data-tab="testimonial" tabindex="-1">
-        <span class="tab-icon" aria-hidden="true">02</span><span><strong>Testimonials</strong><small>Password protected</small></span>
+        <span class="tab-icon" aria-hidden="true">02</span><span><strong>Testimonials</strong><small>${protectedTabStatus}</small></span>
       </button>
       <button class="flyer-tab" type="button" role="tab" id="certificate-tab" aria-selected="false" aria-controls="certificate-view" data-tab="certificate" tabindex="-1">
-        <span class="tab-icon" aria-hidden="true">03</span><span><strong>Certificates</strong><small>Password protected</small></span>
+        <span class="tab-icon" aria-hidden="true">03</span><span><strong>Certificates</strong><small>${protectedTabStatus}</small></span>
       </button>
       <button class="flyer-tab" type="button" role="tab" id="multi-monies-tab" aria-selected="false" aria-controls="multi-monies-view" data-tab="multi-monies" tabindex="-1">
-        <span class="tab-icon" aria-hidden="true">04</span><span><strong>Multi Monies</strong><small>Password protected</small></span>
+        <span class="tab-icon" aria-hidden="true">04</span><span><strong>Multi Monies</strong><small>${protectedTabStatus}</small></span>
       </button>
     </nav>
 
@@ -1148,7 +1150,7 @@ function closeTestimonialGate() {
 }
 
 function requestFlyer(nextFlyer) {
-  if (!PROTECTED_FLYERS.has(nextFlyer) || unlockedProtectedFlyers.has(nextFlyer)) {
+  if (!REQUIRE_TAB_PASSWORDS || !PROTECTED_FLYERS.has(nextFlyer) || unlockedProtectedFlyers.has(nextFlyer)) {
     switchFlyer(nextFlyer);
     return;
   }
@@ -1181,7 +1183,7 @@ document.querySelectorAll('[data-tab]').forEach((tab) => {
     const direction = event.key === 'ArrowRight' ? 1 : -1;
     const next = tabs[(currentIndex + direction + tabs.length) % tabs.length].dataset.tab;
     requestFlyer(next);
-    if (!PROTECTED_FLYERS.has(next) || unlockedProtectedFlyers.has(next)) document.querySelector(`[data-tab="${next}"]`).focus();
+    if (!REQUIRE_TAB_PASSWORDS || !PROTECTED_FLYERS.has(next) || unlockedProtectedFlyers.has(next)) document.querySelector(`[data-tab="${next}"]`).focus();
   });
 });
 
