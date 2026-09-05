@@ -13,6 +13,14 @@ const MULTI_MONIES_HEIGHT = 3300;
 const TESTIMONIAL_PASSWORD = 'aurie26retention';
 const MULTI_MONIES_PASSWORD = 'chrismonies';
 const PROTECTED_FLYERS = new Set(['testimonial', 'certificate', 'multi-monies']);
+const BRAND_HEADING_FONT = '"Montserrat", "Arial Black", Arial, sans-serif';
+const BRAND_BODY_FONT = '"Source Sans 3", "Source Sans Pro", Arial, sans-serif';
+const brandFontsReady = document.fonts
+  ? Promise.all([
+    document.fonts.load('800 92px "Montserrat"'),
+    document.fonts.load('400 45px "Source Sans 3"'),
+  ])
+  : Promise.resolve();
 
 const openHouseInitial = {
   club: 'Lakeshore Speakers Club',
@@ -334,7 +342,7 @@ function fitCompleteTextBlock(ctx, text, maxWidth, maxHeight, maxSize, family, w
 
 function drawOpenHouseClubName(clubName) {
   if (!clubName) return;
-  const family = '"Arial Narrow", "Roboto Condensed", Impact, sans-serif';
+  const family = BRAND_HEADING_FONT;
   const fitted = fitLines(openHouseCtx, clubName.toUpperCase(), 770, 3, 66, 34, family, 800);
   const lineHeight = fitted.size * 1.08;
   const blockHeight = fitted.lines.length * lineHeight;
@@ -364,7 +372,7 @@ function drawOpenHouseClubName(clubName) {
 
 function drawOpenHouseDetail(text, config) {
   if (!text) return;
-  const family = '"Arial Narrow", "Roboto Condensed", Arial, sans-serif';
+  const family = BRAND_BODY_FONT;
   const fitted = fitLines(openHouseCtx, text.toUpperCase(), config.width, config.maxLines, config.maxSize, config.minSize, family, 700);
   const lineHeight = fitted.size * 1.12;
   let y = config.centerY - (fitted.lines.length * lineHeight) / 2 + lineHeight * .78;
@@ -435,10 +443,10 @@ function drawToastmastersLockup(ctx) {
 
   ctx.fillStyle = '#fff';
   ctx.textAlign = 'left';
-  ctx.font = '800 43px Arial, Helvetica, sans-serif';
+  ctx.font = `800 43px ${BRAND_HEADING_FONT}`;
   ctx.fillText('TOASTMASTERS', 589, 130);
 
-  ctx.font = '400 22px Arial, Helvetica, sans-serif';
+  ctx.font = `500 22px ${BRAND_HEADING_FONT}`;
   drawLetterSpacedText(ctx, 'INTERNATIONAL', 753, 177, 5.3);
   ctx.restore();
 }
@@ -491,15 +499,15 @@ function drawTestimonialCard(ctx) {
 }
 
 function drawTestimonialText(ctx, values) {
-  const family = 'Arial, Helvetica, sans-serif';
-  ctx.save(); ctx.fillStyle = '#772432'; ctx.font = '800 108px Georgia, serif'; ctx.fillText('“', 507, 594);
+  const family = BRAND_BODY_FONT;
+  ctx.save(); ctx.fillStyle = '#772432'; ctx.font = `800 108px ${family}`; ctx.fillText('“', 507, 594);
   const quoteFit = fitCompleteTextBlock(ctx, values.testimonial, 500, 285, 45, family, 400);
   const quoteLineHeight = quoteFit.lineHeight;
   ctx.fillStyle = '#101114'; ctx.font = `400 ${quoteFit.size}px ${family}`; ctx.textAlign = 'left';
   let quoteY = 615;
   quoteFit.lines.forEach((line) => { ctx.fillText(line, 568, quoteY); quoteY += quoteLineHeight; });
   const finalQuoteLineWidth = ctx.measureText(quoteFit.lines.at(-1) || '').width;
-  ctx.fillStyle = '#772432'; ctx.font = `700 ${Math.max(35, quoteFit.size)}px Georgia, serif`;
+  ctx.fillStyle = '#772432'; ctx.font = `700 ${Math.max(35, quoteFit.size)}px ${family}`;
   ctx.fillText('”', 568 + finalQuoteLineWidth + 14, quoteY - quoteLineHeight + 2);
   ctx.strokeStyle = '#F2DF74';
   ctx.lineWidth = 3;
@@ -507,8 +515,8 @@ function drawTestimonialText(ctx, values) {
   ctx.moveTo(568, 928);
   ctx.lineTo(690, 928);
   ctx.stroke();
-  const nameFit = fitLines(ctx, values.participantName.toUpperCase(), 510, 2, 40, 27, 'Arial, sans-serif', 800);
-  ctx.fillStyle = '#004165'; ctx.font = `800 ${nameFit.size}px Arial, sans-serif`;
+  const nameFit = fitLines(ctx, values.participantName.toUpperCase(), 510, 2, 40, 27, BRAND_HEADING_FONT, 800);
+  ctx.fillStyle = '#004165'; ctx.font = `800 ${nameFit.size}px ${BRAND_HEADING_FONT}`;
   const nameLineHeight = nameFit.size * 1.08;
   const nameStartY = 982;
   let nameY = nameStartY;
@@ -527,7 +535,7 @@ function renderTestimonial() {
   drawTestimonialBackground(testimonialCtx);
   drawToastmastersLockup(testimonialCtx);
   testimonialCtx.save();
-  testimonialCtx.font = '800 92px "Arial Black", Arial, sans-serif';
+  testimonialCtx.font = `800 92px ${BRAND_HEADING_FONT}`;
   testimonialCtx.textAlign = 'left';
   const titleFirst = 'TOASTI';
   const titleSecond = 'MONIES';
@@ -546,11 +554,11 @@ function renderTestimonial() {
   testimonialCtx.fillText(titleSecond, titleStartX + titleFirstWidth - 1, 323);
   testimonialCtx.restore();
   testimonialCtx.strokeStyle = '#F2DF74'; testimonialCtx.lineWidth = 2; testimonialCtx.beginPath(); testimonialCtx.moveTo(179, 370); testimonialCtx.lineTo(267, 370); testimonialCtx.moveTo(1031, 370); testimonialCtx.lineTo(1125, 370); testimonialCtx.stroke();
-  testimonialCtx.fillStyle = '#F2DF74'; testimonialCtx.font = '800 29px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'STRONG CLUBS  •  STRONGER TOGETHER', 653, 382, 4.2); testimonialCtx.restore();
+  testimonialCtx.fillStyle = '#F2DF74'; testimonialCtx.font = `800 29px ${BRAND_HEADING_FONT}`; drawLetterSpacedText(testimonialCtx, 'STRONG CLUBS  •  STRONGER TOGETHER', 653, 382, 4.2); testimonialCtx.restore();
   drawTestimonialCard(testimonialCtx);
   drawParticipantPhoto(testimonialCtx);
   drawTestimonialText(testimonialCtx, values);
-  testimonialCtx.save(); testimonialCtx.fillStyle = '#fff'; testimonialCtx.font = '800 35px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'CGD TEAM', 1080, 1180, 2.2); testimonialCtx.fillStyle = '#F2DF74'; testimonialCtx.font = '800 24px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'DISTRICT 86', 1092, 1213, 2); testimonialCtx.font = '800 17px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, '2026-2027', 1092, 1241, 1.8); testimonialCtx.restore();
+  testimonialCtx.save(); testimonialCtx.fillStyle = '#fff'; testimonialCtx.font = `800 35px ${BRAND_HEADING_FONT}`; drawLetterSpacedText(testimonialCtx, 'CGD TEAM', 1080, 1180, 2.2); testimonialCtx.fillStyle = '#F2DF74'; testimonialCtx.font = `800 24px ${BRAND_HEADING_FONT}`; drawLetterSpacedText(testimonialCtx, 'DISTRICT 86', 1092, 1213, 2); testimonialCtx.font = `800 17px ${BRAND_HEADING_FONT}`; drawLetterSpacedText(testimonialCtx, '2026-2027', 1092, 1241, 1.8); testimonialCtx.restore();
 }
 
 function renderCertificate() {
@@ -564,11 +572,11 @@ function renderCertificate() {
   certificateCtx.drawImage(certificateTemplate, 470, 474, 900, 18, 470, 493, 900, 108);
 
   if (!certificateName) return;
-  const nameFamily = '"Times New Roman", Georgia, serif';
-  const nameFit = fitLines(certificateCtx, certificateName.toUpperCase(), 830, 1, 78, 28, nameFamily, 400);
+  const nameFamily = BRAND_HEADING_FONT;
+  const nameFit = fitLines(certificateCtx, certificateName.toUpperCase(), 830, 1, 78, 28, nameFamily, 500);
   certificateCtx.save();
   certificateCtx.fillStyle = '#082b5b';
-  certificateCtx.font = `400 ${nameFit.size}px ${nameFamily}`;
+  certificateCtx.font = `500 ${nameFit.size}px ${nameFamily}`;
   certificateCtx.textAlign = 'center';
   certificateCtx.textBaseline = 'alphabetic';
   certificateCtx.fillText(nameFit.lines[0] || '', 927, 580);
@@ -620,13 +628,13 @@ function drawMultiMoniesHeader(ctx) {
   ctx.stroke();
 
   ctx.fillStyle = '#fff';
-  ctx.font = '800 78px Arial, Helvetica, sans-serif';
+  ctx.font = `800 78px ${BRAND_HEADING_FONT}`;
   ctx.textAlign = 'left';
   ctx.fillText('TOASTMASTERS', 1070, 220);
-  ctx.font = '400 41px Arial, Helvetica, sans-serif';
+  ctx.font = `500 41px ${BRAND_HEADING_FONT}`;
   drawLetterSpacedText(ctx, 'INTERNATIONAL', 1400, 304, 10);
 
-  ctx.font = '800 174px "Arial Black", Arial, sans-serif';
+  ctx.font = `800 174px ${BRAND_HEADING_FONT}`;
   const titleFirst = 'TOASTI';
   const titleSecond = 'MONIES';
   const firstWidth = ctx.measureText(titleFirst).width;
@@ -654,7 +662,7 @@ function drawMultiMoniesHeader(ctx) {
   ctx.lineTo(2190, 642);
   ctx.stroke();
   ctx.fillStyle = '#F2DF74';
-  ctx.font = '800 54px Arial, sans-serif';
+  ctx.font = `800 54px ${BRAND_HEADING_FONT}`;
   drawLetterSpacedText(ctx, 'STRONG CLUBS  •  STRONGER TOGETHER', MULTI_MONIES_WIDTH / 2, 660, 8);
   ctx.restore();
 }
@@ -876,13 +884,13 @@ function drawMultiBubble(ctx, entry, bubbleIndex, x, y, width, height, columns) 
   const quoteSize = columns === 1 ? 56 : 34;
   const quoteReserve = quoteSize * 1.5;
   const commentTextWidth = Math.max(140, safeWidth - quoteReserve - 24);
-  const commentFit = fitCompleteTextBlock(ctx, entry.comment, commentTextWidth, commentHeight, maxCommentSize, 'Arial, Helvetica, sans-serif', 400, 1.2);
+  const commentFit = fitCompleteTextBlock(ctx, entry.comment, commentTextWidth, commentHeight, maxCommentSize, BRAND_BODY_FONT, 400, 1.2);
   const commentBlockHeight = commentFit.lines.length * commentFit.lineHeight;
   const commentCenterX = (safeLeft + safeRight) / 2;
   const firstLineY = commentTop + (commentHeight - commentBlockHeight) / 2 + commentFit.lineHeight / 2;
   let commentY = firstLineY;
   ctx.fillStyle = '#15161a';
-  ctx.font = `400 ${commentFit.size}px Arial, Helvetica, sans-serif`;
+  ctx.font = `400 ${commentFit.size}px ${BRAND_BODY_FONT}`;
   commentFit.lines.forEach((line) => {
     ctx.fillText(line, commentCenterX, commentY, commentTextWidth);
     commentY += commentFit.lineHeight;
@@ -891,11 +899,11 @@ function drawMultiBubble(ctx, entry, bubbleIndex, x, y, width, height, columns) 
   const firstLine = commentFit.lines[0] || '';
   const lastLine = commentFit.lines.at(-1) || '';
   const lastLineY = firstLineY + Math.max(0, commentFit.lines.length - 1) * commentFit.lineHeight;
-  ctx.font = `400 ${commentFit.size}px Arial, Helvetica, sans-serif`;
+  ctx.font = `400 ${commentFit.size}px ${BRAND_BODY_FONT}`;
   const firstLineWidth = Math.min(ctx.measureText(firstLine).width, commentTextWidth);
   const lastLineWidth = Math.min(ctx.measureText(lastLine).width, commentTextWidth);
   ctx.fillStyle = '#772432';
-  ctx.font = `800 ${quoteSize}px Georgia, serif`;
+  ctx.font = `800 ${quoteSize}px ${BRAND_BODY_FONT}`;
   const quoteWidth = Math.max(ctx.measureText('“').width, ctx.measureText('”').width);
   const quoteGap = Math.max(3, commentFit.size * .12);
   const openingQuoteX = Math.max(
@@ -918,14 +926,14 @@ function drawMultiBubble(ctx, entry, bubbleIndex, x, y, width, height, columns) 
   ctx.lineTo(commentCenterX + dividerWidth / 2, dividerY);
   ctx.stroke();
 
-  const nameFit = fitLines(ctx, entry.name.toUpperCase(), safeWidth - 20, 1, columns === 1 ? 43 : 31, 17, 'Arial, sans-serif', 800);
+  const nameFit = fitLines(ctx, entry.name.toUpperCase(), safeWidth - 20, 1, columns === 1 ? 43 : 31, 17, BRAND_HEADING_FONT, 800);
   ctx.fillStyle = '#004165';
-  ctx.font = `800 ${nameFit.size}px Arial, sans-serif`;
+  ctx.font = `800 ${nameFit.size}px ${BRAND_HEADING_FONT}`;
   ctx.fillText(nameFit.lines[0] || '', commentCenterX, dividerY + attributionHeight * .38, safeWidth - 20);
 
-  const roleFit = fitLines(ctx, entry.designation, safeWidth - 20, 1, columns === 1 ? 28 : 21, 13, 'Arial, sans-serif', 400);
+  const roleFit = fitLines(ctx, entry.designation, safeWidth - 20, 1, columns === 1 ? 28 : 21, 13, BRAND_BODY_FONT, 400);
   ctx.fillStyle = '#15161a';
-  ctx.font = `400 ${roleFit.size}px Arial, sans-serif`;
+  ctx.font = `400 ${roleFit.size}px ${BRAND_BODY_FONT}`;
   ctx.fillText(roleFit.lines[0] || '', commentCenterX, dividerY + attributionHeight * .74, safeWidth - 20);
   ctx.restore();
   ctx.restore();
@@ -961,12 +969,12 @@ function renderMultiMonies() {
 
   multiMoniesCtx.save();
   multiMoniesCtx.fillStyle = '#fff';
-  multiMoniesCtx.font = '800 58px Arial, sans-serif';
+  multiMoniesCtx.font = `800 58px ${BRAND_HEADING_FONT}`;
   drawLetterSpacedText(multiMoniesCtx, 'CGD TEAM', 2160, 3095, 4);
   multiMoniesCtx.fillStyle = '#F2DF74';
-  multiMoniesCtx.font = '800 41px Arial, sans-serif';
+  multiMoniesCtx.font = `800 41px ${BRAND_HEADING_FONT}`;
   drawLetterSpacedText(multiMoniesCtx, 'DISTRICT 86', 2190, 3160, 4);
-  multiMoniesCtx.font = '800 29px Arial, sans-serif';
+  multiMoniesCtx.font = `800 29px ${BRAND_HEADING_FONT}`;
   drawLetterSpacedText(multiMoniesCtx, '2026-2027', 2190, 3212, 3);
   multiMoniesCtx.restore();
 }
@@ -1248,28 +1256,31 @@ certificateTemplate.onerror = () => {
 
 certificateTemplate.src = CERTIFICATE_TEMPLATE_URL;
 
-document.querySelector('#open-house-form').addEventListener('submit', (event) => {
+document.querySelector('#open-house-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!event.currentTarget.reportValidity() || !openHouseTemplateReady) return;
+  await brandFontsReady;
   renderOpenHouse();
   downloadCanvas(openHouseCanvas, `${slugify(document.querySelector('#club').value, 'toastmasters-club')}-open-house.png`);
 });
 
-document.querySelector('#testimonial-form').addEventListener('submit', (event) => {
+document.querySelector('#testimonial-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!event.currentTarget.reportValidity()) return;
+  await brandFontsReady;
   renderTestimonial();
   downloadCanvas(testimonialCanvas, `${slugify(document.querySelector('#participantName').value, 'participant')}-testimonial.png`);
 });
 
-document.querySelector('#certificate-form').addEventListener('submit', (event) => {
+document.querySelector('#certificate-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!event.currentTarget.reportValidity() || !certificateTemplateReady) return;
+  await brandFontsReady;
   renderCertificate();
   downloadCanvas(certificateCanvas, `${slugify(document.querySelector('#certificateName').value, 'participant')}-toastimonies-certificate.png`, 'Your certificate has been downloaded.');
 });
 
-document.querySelector('#multi-monies-form').addEventListener('submit', (event) => {
+document.querySelector('#multi-monies-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!event.currentTarget.reportValidity()) return;
   const missingPhotoIndex = multiEntries.slice(0, multiBubbleCount).findIndex((entry) => !entry.image);
@@ -1283,6 +1294,7 @@ document.querySelector('#multi-monies-form').addEventListener('submit', (event) 
     showToast(`Add a photo for Participant ${missingPhotoIndex + 1} before downloading.`);
     return;
   }
+  await brandFontsReady;
   renderMultiMonies();
   downloadCanvas(multiMoniesCanvas, 'multi-monies-us-letter.png', 'Your Multi Monies flyer has been downloaded.');
 });
@@ -1350,3 +1362,9 @@ document.querySelector('#remove-photo').addEventListener('click', clearParticipa
 
 renderTestimonial();
 renderMultiMonies();
+brandFontsReady.then(() => {
+  renderOpenHouse();
+  renderTestimonial();
+  renderCertificate();
+  renderMultiMonies();
+});

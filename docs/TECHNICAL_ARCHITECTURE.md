@@ -138,6 +138,8 @@ The club name is centered; the remaining fields are left-aligned in template-spe
 
 Testimonials is a square 1254 × 1254 composition. Its vector background, speech card, participant photo frame, quote marks, text, attribution, district footer, and logo lockup are redrawn on every input event.
 
+The application uses the free Toastmasters typography alternatives across every editable or vector-rendered text layer: self-hosted Montserrat for headings and names, and self-hosted Source Sans 3 for body copy and supporting details. Source Sans 3 is the maintained open-source successor to Source Sans Pro. Both variable TrueType files and their SIL Open Font License texts live under `public/fonts/`. Every download handler waits for both font faces before its final render, preventing a fallback-font PNG if a user exports during initial font loading. Text baked into the supplied Open House and Certificate PNG templates cannot change without reconstructing those source images; only their editable overlays use the new font system.
+
 The participant portrait is loaded through a temporary object URL, centre-cropped to a square, clipped to a circle, and scaled using the zoom slider. Removing or replacing a portrait revokes the previous object URL.
 
 The layout supports:
@@ -276,7 +278,7 @@ flowchart LR
 
 - Canvas coordinates are template-specific and not driven by a general template schema.
 - Hardcoded client-side passwords are discoverable and provide no real authorization boundary.
-- System fallback fonts can have slightly different metrics across browsers and operating systems.
+- If either self-hosted brand font fails to load, the configured system fallback can have slightly different metrics across browsers and operating systems.
 - Portrait cropping is centered; users can zoom but cannot independently pan horizontally or vertically.
 - Export uses data URLs, which consume more temporary memory than Blob-based export—especially for the 2550 × 3300 canvas.
 - PNG files have exact pixel dimensions but no guaranteed embedded DPI metadata.
@@ -301,6 +303,7 @@ Before deployment:
 13. Confirm certificate signatures match the supplied template pixel-for-pixel outside the participant-name replacement region.
 14. Test desktop, tablet, mobile, keyboard navigation, and reduced-motion behavior.
 15. Confirm the browser network panel sends no form or portrait data.
+16. Confirm Montserrat renders all editable headings and names, Source Sans 3 renders editable body/details, and all four downloads retain those fonts after a cold page load.
 
 ## 20. Extension guidance
 

@@ -45,6 +45,8 @@ Multi Monies assigns a different bubble silhouette to each of its eight particip
 
 In both Testimonials and Multi Monies artwork, the True Maroon `MONIES` title has a thin Happy Yellow outline and soft glow for stronger contrast against Loyal Blue.
 
+All four outputs use the free brand-alternative typefaces for editable or canvas-rendered content: Montserrat for headings and names, and Source Sans 3 (the current open-source successor to Source Sans Pro) for body copy and supporting details. Both variable fonts are self-hosted under the SIL Open Font License so preview and PNG export use the same typography. Text already embedded in the supplied Open House and Certificate background images remains part of those source images and is not reconstructed.
+
 ## Brand palette
 
 The Testimonials and Multi Monies canvases use the official Toastmasters palette from the [Toastmasters International Brand Manual](https://content.toastmasters.org/image/upload/02330-001-0001-brand-manual.pdf):
@@ -82,3 +84,5 @@ npm run preview
 ```
 
 Import the repository as a Vercel project. `vercel.json` runs `npm run build` and publishes `dist`. Any static host can serve the same production output.
+
+Font license texts are shipped with the app at `public/fonts/OFL-Montserrat.txt` and `public/fonts/OFL-SourceSans3.txt`.
