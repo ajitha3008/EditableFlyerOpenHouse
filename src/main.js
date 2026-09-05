@@ -8,8 +8,11 @@ const OPEN_HOUSE_HEIGHT = 1568;
 const TESTIMONIAL_SIZE = 1254;
 const CERTIFICATE_WIDTH = 1463;
 const CERTIFICATE_HEIGHT = 1075;
+const MULTI_MONIES_WIDTH = 2550;
+const MULTI_MONIES_HEIGHT = 3300;
 const TESTIMONIAL_PASSWORD = 'aurie26retention';
-const PROTECTED_FLYERS = new Set(['testimonial', 'certificate']);
+const MULTI_MONIES_PASSWORD = 'chrismonies';
+const PROTECTED_FLYERS = new Set(['testimonial', 'certificate', 'multi-monies']);
 
 const openHouseInitial = {
   club: 'Lakeshore Speakers Club',
@@ -44,6 +47,28 @@ const testimonialFields = [
 const certificateFields = [
   { id: 'certificateName', label: 'Participant name', max: 50, hint: 'This is the only content changed on the certificate.', placeholder: 'e.g. Priya Sharma' },
 ];
+
+function createMultiEntries() {
+  return Array.from({ length: 8 }, (_, index) => ({
+    comment: 'Share this participant’s Toastmasters experience and the impact it has made.',
+    name: `Participant ${index + 1}`,
+    designation: 'Toastmasters Member',
+    image: null,
+    imageUrl: '',
+    fileName: '',
+    zoom: 100,
+    tilt: (Math.random() < .5 ? -1 : 1) * (.45 + Math.random() * .85) * Math.PI / 180,
+  }));
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
 
 function fieldMarkup(field, values) {
   const describedBy = `${field.id}-hint ${field.id}-counter`;
@@ -87,6 +112,9 @@ document.querySelector('#app').innerHTML = `
       </button>
       <button class="flyer-tab" type="button" role="tab" id="certificate-tab" aria-selected="false" aria-controls="certificate-view" data-tab="certificate" tabindex="-1">
         <span class="tab-icon" aria-hidden="true">03</span><span><strong>Certificates</strong><small>Password protected</small></span>
+      </button>
+      <button class="flyer-tab" type="button" role="tab" id="multi-monies-tab" aria-selected="false" aria-controls="multi-monies-view" data-tab="multi-monies" tabindex="-1">
+        <span class="tab-icon" aria-hidden="true">04</span><span><strong>Multi Monies</strong><small>Password protected</small></span>
       </button>
     </nav>
 
@@ -163,6 +191,32 @@ document.querySelector('#app').innerHTML = `
         <div class="preview-footer"><p><span aria-hidden="true">✓</span> Original signatures</p><p><span aria-hidden="true">✓</span> Editable recipient</p><p><span aria-hidden="true">✓</span> High-resolution PNG</p></div>
       </section>
     </section>
+
+    <section class="workspace flyer-view multi-monies-view" id="multi-monies-view" role="tabpanel" aria-labelledby="multi-monies-tab" data-view="multi-monies" hidden>
+      <aside class="editor-panel multi-editor-panel" aria-label="Multi Monies participant details">
+        <div class="panel-heading multi-heading"><span class="step">04</span><div><h2>Multi Monies stories</h2><p>Create up to eight participant bubbles.</p></div></div>
+        <form id="multi-monies-form">
+          <div class="field-group">
+            <div class="label-row"><label for="bubble-count">Number of bubbles</label><span class="optional-label">Maximum 8</span></div>
+            <select id="bubble-count" name="bubble-count" aria-describedby="bubble-count-hint">
+              ${Array.from({ length: 8 }, (_, index) => `<option value="${index + 1}"${index === 1 ? ' selected' : ''}>${index + 1} ${index === 0 ? 'bubble' : 'bubbles'}</option>`).join('')}
+            </select>
+            <p class="field-hint" id="bubble-count-hint">Participant editors and preview bubbles update instantly.</p>
+          </div>
+          <div class="speaker-editors" id="speaker-editors"></div>
+          <div class="format-note multi-note"><span aria-hidden="true">8×</span><p><strong>U.S. Letter output</strong>Downloads at 2550 × 3300 pixels. Every selected participant must have a photo.</p></div>
+          <div class="actions">
+            <button class="button button-primary" type="submit"><span>Download Multi Monies</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14"/></svg></button>
+            <button class="button button-secondary" type="button" id="multi-monies-reset">Reset</button>
+          </div>
+        </form>
+      </aside>
+      <section class="preview-panel" aria-labelledby="multi-monies-preview-title">
+        <div class="preview-heading"><div><span class="step">04</span><h2 id="multi-monies-preview-title">Live preview</h2></div><span class="size-badge">2550 × 3300 px · U.S. Letter</span></div>
+        <div class="canvas-shell letter-canvas"><canvas class="is-ready" id="multi-monies-canvas" width="2550" height="3300" aria-label="Preview of the Multi Monies U.S. Letter participant flyer"></canvas></div>
+        <div class="preview-footer"><p><span aria-hidden="true">✓</span> Up to 8 bubbles</p><p><span aria-hidden="true">✓</span> Editable portraits</p><p><span aria-hidden="true">✓</span> 300 DPI letter size</p></div>
+      </section>
+    </section>
   </main>
 
   <footer><p>Built for stronger clubs and more confident voices.</p><p>Your edits and photos stay on this device.</p></footer>
@@ -198,6 +252,8 @@ const testimonialCanvas = document.querySelector('#testimonial-canvas');
 const testimonialCtx = testimonialCanvas.getContext('2d');
 const certificateCanvas = document.querySelector('#certificate-canvas');
 const certificateCtx = certificateCanvas.getContext('2d');
+const multiMoniesCanvas = document.querySelector('#multi-monies-canvas');
+const multiMoniesCtx = multiMoniesCanvas.getContext('2d');
 const openHouseTemplate = new Image();
 const toastmastersLogo = new Image();
 const certificateTemplate = new Image();
@@ -207,7 +263,9 @@ let certificateTemplateReady = false;
 let participantImage = null;
 let participantImageUrl = '';
 let activeFlyer = 'open-house';
-let protectedFlyersUnlocked = false;
+let multiBubbleCount = 2;
+let multiEntries = createMultiEntries();
+const unlockedProtectedFlyers = new Set();
 let pendingFlyer = 'testimonial';
 
 function valuesFromFields(fields) {
@@ -368,7 +426,7 @@ function drawToastmastersLockup(ctx) {
   ctx.save();
   ctx.drawImage(toastmastersLogo, logoX, logoY, logoSize, logoSize);
 
-  ctx.strokeStyle = '#f4c54e';
+  ctx.strokeStyle = '#F2DF74';
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(559, 75);
@@ -386,19 +444,16 @@ function drawToastmastersLockup(ctx) {
 }
 
 function drawTestimonialBackground(ctx) {
-  const navyGradient = ctx.createLinearGradient(0, 0, TESTIMONIAL_SIZE, 900);
-  navyGradient.addColorStop(0, '#052f50'); navyGradient.addColorStop(.58, '#06233d'); navyGradient.addColorStop(1, '#07365a');
-  ctx.fillStyle = navyGradient; ctx.fillRect(0, 0, TESTIMONIAL_SIZE, TESTIMONIAL_SIZE);
-  const redGradient = ctx.createLinearGradient(0, 700, TESTIMONIAL_SIZE, TESTIMONIAL_SIZE);
-  redGradient.addColorStop(0, '#9d0b20'); redGradient.addColorStop(.5, '#bd1027'); redGradient.addColorStop(1, '#8d071c');
-  ctx.fillStyle = redGradient;
+  ctx.fillStyle = '#004165';
+  ctx.fillRect(0, 0, TESTIMONIAL_SIZE, TESTIMONIAL_SIZE);
+  ctx.fillStyle = '#772432';
   ctx.beginPath(); ctx.moveTo(0, 350); ctx.bezierCurveTo(100, 600, 310, 740, 570, 845); ctx.bezierCurveTo(850, 958, 1050, 990, 1254, 825); ctx.lineTo(1254, 1254); ctx.lineTo(0, 1254); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = '#f1c44f'; ctx.lineWidth = 7;
+  ctx.strokeStyle = '#F2DF74'; ctx.lineWidth = 7;
   ctx.beginPath(); ctx.moveTo(-12, 321); ctx.bezierCurveTo(92, 584, 315, 733, 577, 837); ctx.bezierCurveTo(860, 951, 1061, 972, 1262, 806); ctx.stroke();
-  ctx.strokeStyle = 'rgba(8,55,91,.8)'; ctx.lineWidth = 17;
+  ctx.strokeStyle = 'rgba(0,65,101,.9)'; ctx.lineWidth = 17;
   ctx.beginPath(); ctx.moveTo(-12, 344); ctx.bezierCurveTo(92, 600, 304, 754, 571, 860); ctx.stroke();
-  drawDots(ctx, 1000, 10, 15, 25, 17, '#1e6590', 1);
-  drawDots(ctx, 0, 934, 19, 20, 17, '#5b0617', -1);
+  drawDots(ctx, 1000, 10, 15, 25, 17, '#A9B2B1', 1);
+  drawDots(ctx, 0, 934, 19, 20, 17, '#A9B2B1', -1);
 }
 
 function drawPhotoPlaceholder(ctx, centerX, centerY, radius) {
@@ -437,23 +492,23 @@ function drawTestimonialCard(ctx) {
 
 function drawTestimonialText(ctx, values) {
   const family = 'Arial, Helvetica, sans-serif';
-  ctx.save(); ctx.fillStyle = '#a20d25'; ctx.font = '800 108px Georgia, serif'; ctx.fillText('“', 507, 594);
+  ctx.save(); ctx.fillStyle = '#772432'; ctx.font = '800 108px Georgia, serif'; ctx.fillText('“', 507, 594);
   const quoteFit = fitCompleteTextBlock(ctx, values.testimonial, 500, 285, 45, family, 400);
   const quoteLineHeight = quoteFit.lineHeight;
   ctx.fillStyle = '#101114'; ctx.font = `400 ${quoteFit.size}px ${family}`; ctx.textAlign = 'left';
   let quoteY = 615;
   quoteFit.lines.forEach((line) => { ctx.fillText(line, 568, quoteY); quoteY += quoteLineHeight; });
   const finalQuoteLineWidth = ctx.measureText(quoteFit.lines.at(-1) || '').width;
-  ctx.fillStyle = '#a20d25'; ctx.font = `700 ${Math.max(35, quoteFit.size)}px Georgia, serif`;
+  ctx.fillStyle = '#772432'; ctx.font = `700 ${Math.max(35, quoteFit.size)}px Georgia, serif`;
   ctx.fillText('”', 568 + finalQuoteLineWidth + 14, quoteY - quoteLineHeight + 2);
-  ctx.strokeStyle = '#e4ac32';
+  ctx.strokeStyle = '#F2DF74';
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(568, 928);
   ctx.lineTo(690, 928);
   ctx.stroke();
   const nameFit = fitLines(ctx, values.participantName.toUpperCase(), 510, 2, 40, 27, 'Arial, sans-serif', 800);
-  ctx.fillStyle = '#062d4e'; ctx.font = `800 ${nameFit.size}px Arial, sans-serif`;
+  ctx.fillStyle = '#004165'; ctx.font = `800 ${nameFit.size}px Arial, sans-serif`;
   const nameLineHeight = nameFit.size * 1.08;
   const nameStartY = 982;
   let nameY = nameStartY;
@@ -480,13 +535,22 @@ function renderTestimonial() {
   const titleWidth = titleFirstWidth + testimonialCtx.measureText(titleSecond).width;
   const titleStartX = (TESTIMONIAL_SIZE - titleWidth) / 2;
   testimonialCtx.fillStyle = '#fff'; testimonialCtx.fillText(titleFirst, titleStartX, 323);
-  testimonialCtx.fillStyle = '#b41028'; testimonialCtx.fillText(titleSecond, titleStartX + titleFirstWidth - 1, 323);
-  testimonialCtx.strokeStyle = '#e5b43a'; testimonialCtx.lineWidth = 2; testimonialCtx.beginPath(); testimonialCtx.moveTo(179, 370); testimonialCtx.lineTo(267, 370); testimonialCtx.moveTo(1031, 370); testimonialCtx.lineTo(1125, 370); testimonialCtx.stroke();
-  testimonialCtx.fillStyle = '#f3c755'; testimonialCtx.font = '800 29px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'STRONG CLUBS  •  STRONGER TOGETHER', 653, 382, 4.2); testimonialCtx.restore();
+  testimonialCtx.save();
+  testimonialCtx.fillStyle = '#772432';
+  testimonialCtx.strokeStyle = '#F2DF74';
+  testimonialCtx.lineWidth = 3;
+  testimonialCtx.lineJoin = 'round';
+  testimonialCtx.shadowColor = 'rgba(242,223,116,.42)';
+  testimonialCtx.shadowBlur = 10;
+  testimonialCtx.strokeText(titleSecond, titleStartX + titleFirstWidth - 1, 323);
+  testimonialCtx.fillText(titleSecond, titleStartX + titleFirstWidth - 1, 323);
+  testimonialCtx.restore();
+  testimonialCtx.strokeStyle = '#F2DF74'; testimonialCtx.lineWidth = 2; testimonialCtx.beginPath(); testimonialCtx.moveTo(179, 370); testimonialCtx.lineTo(267, 370); testimonialCtx.moveTo(1031, 370); testimonialCtx.lineTo(1125, 370); testimonialCtx.stroke();
+  testimonialCtx.fillStyle = '#F2DF74'; testimonialCtx.font = '800 29px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'STRONG CLUBS  •  STRONGER TOGETHER', 653, 382, 4.2); testimonialCtx.restore();
   drawTestimonialCard(testimonialCtx);
   drawParticipantPhoto(testimonialCtx);
   drawTestimonialText(testimonialCtx, values);
-  testimonialCtx.save(); testimonialCtx.fillStyle = '#fff'; testimonialCtx.font = '800 35px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'CGD TEAM', 1080, 1180, 2.2); testimonialCtx.fillStyle = '#f6cf61'; testimonialCtx.font = '800 24px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'DISTRICT 86', 1092, 1213, 2); testimonialCtx.font = '800 17px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, '2026-2027', 1092, 1241, 1.8); testimonialCtx.restore();
+  testimonialCtx.save(); testimonialCtx.fillStyle = '#fff'; testimonialCtx.font = '800 35px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'CGD TEAM', 1080, 1180, 2.2); testimonialCtx.fillStyle = '#F2DF74'; testimonialCtx.font = '800 24px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, 'DISTRICT 86', 1092, 1213, 2); testimonialCtx.font = '800 17px Arial, sans-serif'; drawLetterSpacedText(testimonialCtx, '2026-2027', 1092, 1241, 1.8); testimonialCtx.restore();
 }
 
 function renderCertificate() {
@@ -509,6 +573,507 @@ function renderCertificate() {
   certificateCtx.textBaseline = 'alphabetic';
   certificateCtx.fillText(nameFit.lines[0] || '', 927, 580);
   certificateCtx.restore();
+}
+
+function drawMultiMoniesBackground(ctx) {
+  ctx.fillStyle = '#004165';
+  ctx.fillRect(0, 0, MULTI_MONIES_WIDTH, MULTI_MONIES_HEIGHT);
+
+  ctx.fillStyle = '#772432';
+  ctx.beginPath();
+  ctx.moveTo(0, 820);
+  ctx.bezierCurveTo(330, 1380, 860, 1710, 1430, 1940);
+  ctx.bezierCurveTo(1940, 2140, 2280, 2130, MULTI_MONIES_WIDTH, 1810);
+  ctx.lineTo(MULTI_MONIES_WIDTH, MULTI_MONIES_HEIGHT);
+  ctx.lineTo(0, MULTI_MONIES_HEIGHT);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#F2DF74';
+  ctx.lineWidth = 16;
+  ctx.beginPath();
+  ctx.moveTo(-20, 755);
+  ctx.bezierCurveTo(320, 1335, 870, 1665, 1445, 1895);
+  ctx.bezierCurveTo(1945, 2095, 2270, 2090, MULTI_MONIES_WIDTH + 20, 1745);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#004165';
+  ctx.lineWidth = 34;
+  ctx.beginPath();
+  ctx.moveTo(-20, 805);
+  ctx.bezierCurveTo(320, 1380, 855, 1715, 1425, 1945);
+  ctx.stroke();
+
+  drawDots(ctx, 2070, 10, 29, 36, 20, '#A9B2B1', 1);
+  drawDots(ctx, 0, 2580, 35, 36, 22, '#A9B2B1', -1);
+}
+
+function drawMultiMoniesHeader(ctx) {
+  ctx.save();
+  if (toastmastersLogoReady) ctx.drawImage(toastmastersLogo, 665, 62, 300, 300);
+
+  ctx.strokeStyle = '#F2DF74';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(1015, 115);
+  ctx.lineTo(1015, 320);
+  ctx.stroke();
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '800 78px Arial, Helvetica, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('TOASTMASTERS', 1070, 220);
+  ctx.font = '400 41px Arial, Helvetica, sans-serif';
+  drawLetterSpacedText(ctx, 'INTERNATIONAL', 1400, 304, 10);
+
+  ctx.font = '800 174px "Arial Black", Arial, sans-serif';
+  const titleFirst = 'TOASTI';
+  const titleSecond = 'MONIES';
+  const firstWidth = ctx.measureText(titleFirst).width;
+  const totalWidth = firstWidth + ctx.measureText(titleSecond).width;
+  const startX = (MULTI_MONIES_WIDTH - totalWidth) / 2;
+  ctx.fillStyle = '#fff';
+  ctx.fillText(titleFirst, startX, 540);
+  ctx.save();
+  ctx.fillStyle = '#772432';
+  ctx.strokeStyle = '#F2DF74';
+  ctx.lineWidth = 5;
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = 'rgba(242,223,116,.42)';
+  ctx.shadowBlur = 18;
+  ctx.strokeText(titleSecond, startX + firstWidth - 2, 540);
+  ctx.fillText(titleSecond, startX + firstWidth - 2, 540);
+  ctx.restore();
+
+  ctx.strokeStyle = '#F2DF74';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(360, 642);
+  ctx.lineTo(560, 642);
+  ctx.moveTo(1990, 642);
+  ctx.lineTo(2190, 642);
+  ctx.stroke();
+  ctx.fillStyle = '#F2DF74';
+  ctx.font = '800 54px Arial, sans-serif';
+  drawLetterSpacedText(ctx, 'STRONG CLUBS  •  STRONGER TOGETHER', MULTI_MONIES_WIDTH / 2, 660, 8);
+  ctx.restore();
+}
+
+function drawMultiParticipantPhoto(ctx, entry, centerX, centerY, radius) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.24)';
+  ctx.shadowBlur = 28;
+  ctx.shadowOffsetY = 12;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius + 16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.clip();
+  if (entry.image) {
+    const sourceSize = Math.min(entry.image.naturalWidth, entry.image.naturalHeight) / (entry.zoom / 100);
+    const sourceX = (entry.image.naturalWidth - sourceSize) / 2;
+    const sourceY = (entry.image.naturalHeight - sourceSize) / 2;
+    ctx.drawImage(entry.image, sourceX, sourceY, sourceSize, sourceSize, centerX - radius, centerY - radius, radius * 2, radius * 2);
+  } else {
+    drawPhotoPlaceholder(ctx, centerX, centerY, radius);
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius + 4, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function traceSmoothBlob(ctx, x, y, width, height, lobes = 12, variation = .08) {
+  const points = Array.from({ length: lobes }, (_, index) => {
+    const angle = (Math.PI * 2 * index) / lobes;
+    const ripple = 1 + variation * Math.sin(index * 4.7 + lobes);
+    return {
+      x: x + width / 2 + Math.cos(angle) * width * .49 * ripple,
+      y: y + height / 2 + Math.sin(angle) * height * .48 * ripple,
+    };
+  });
+  const midpoint = (first, second) => ({ x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 });
+  const firstMidpoint = midpoint(points.at(-1), points[0]);
+  ctx.beginPath();
+  ctx.moveTo(firstMidpoint.x, firstMidpoint.y);
+  points.forEach((point, index) => {
+    const next = points[(index + 1) % points.length];
+    const nextMidpoint = midpoint(point, next);
+    ctx.quadraticCurveTo(point.x, point.y, nextMidpoint.x, nextMidpoint.y);
+  });
+  ctx.closePath();
+}
+
+function traceStarburst(ctx, x, y, width, height, points = 18) {
+  ctx.beginPath();
+  for (let index = 0; index < points * 2; index += 1) {
+    const angle = -Math.PI / 2 + (Math.PI * index) / points;
+    const radius = index % 2 === 0 ? 1 : .79;
+    const pointX = x + width / 2 + Math.cos(angle) * width * .5 * radius;
+    const pointY = y + height / 2 + Math.sin(angle) * height * .5 * radius;
+    if (index === 0) ctx.moveTo(pointX, pointY);
+    else ctx.lineTo(pointX, pointY);
+  }
+  ctx.closePath();
+}
+
+function fillAndOutlineBubble(ctx) {
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,65,101,.28)';
+  ctx.lineWidth = 5;
+  ctx.stroke();
+}
+
+function drawMultiBubbleShape(ctx, bubbleIndex, x, y, width, height) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.22)';
+  ctx.shadowBlur = 28;
+  ctx.shadowOffsetY = 15;
+
+  switch (bubbleIndex) {
+    case 0:
+      ctx.beginPath();
+      ctx.moveTo(x + width * .62, y + height - 36);
+      ctx.lineTo(x + width * .62, y + height + Math.min(42, height * .09));
+      ctx.lineTo(x + width * .7, y + height - 30);
+      ctx.closePath();
+      fillAndOutlineBubble(ctx);
+      roundedRect(ctx, x, y, width, height, Math.min(55, height * .1));
+      fillAndOutlineBubble(ctx);
+      break;
+    case 1:
+      ctx.beginPath();
+      ctx.moveTo(x + width * .2, y + height * .69);
+      ctx.lineTo(x + width * .07, y + height * .95);
+      ctx.lineTo(x + width * .34, y + height * .8);
+      ctx.closePath();
+      fillAndOutlineBubble(ctx);
+      ctx.beginPath();
+      ctx.ellipse(x + width / 2, y + height / 2, width / 2, height / 2, 0, 0, Math.PI * 2);
+      fillAndOutlineBubble(ctx);
+      break;
+    case 2:
+      traceSmoothBlob(ctx, x, y, width, height, 16, .09);
+      fillAndOutlineBubble(ctx);
+      [
+        { radius: 18, offsetX: 0, offsetY: height * .91 },
+        { radius: 10, offsetX: 24, offsetY: height * .955 },
+        { radius: 5, offsetX: 40, offsetY: height * .985 },
+      ].forEach(({ radius, offsetX, offsetY }) => {
+        ctx.beginPath();
+        ctx.arc(x + width * .73 + offsetX, y + offsetY, radius, 0, Math.PI * 2);
+        fillAndOutlineBubble(ctx);
+      });
+      break;
+    case 3:
+      traceStarburst(ctx, x, y, width, height, 19);
+      fillAndOutlineBubble(ctx);
+      break;
+    case 4:
+      ctx.beginPath();
+      ctx.moveTo(x + width - 72, y + height * .39);
+      ctx.lineTo(x + width + 18, y + height * .5);
+      ctx.lineTo(x + width - 72, y + height * .61);
+      ctx.closePath();
+      fillAndOutlineBubble(ctx);
+      roundedRect(ctx, x, y, width - 35, height, Math.min(85, height * .18));
+      fillAndOutlineBubble(ctx);
+      break;
+    case 5:
+      ctx.beginPath();
+      ctx.moveTo(x + width * .18, y);
+      ctx.quadraticCurveTo(x, y, x, y + height * .24);
+      ctx.lineTo(x, y + height * .68);
+      ctx.quadraticCurveTo(x, y + height, x + width * .26, y + height);
+      ctx.lineTo(x + width * .48, y + height);
+      ctx.lineTo(x + width * .57, y + height + Math.min(58, height * .13));
+      ctx.lineTo(x + width * .66, y + height);
+      ctx.lineTo(x + width * .79, y + height);
+      ctx.quadraticCurveTo(x + width, y + height, x + width, y + height * .72);
+      ctx.lineTo(x + width, y + height * .25);
+      ctx.quadraticCurveTo(x + width, y, x + width * .8, y);
+      ctx.closePath();
+      fillAndOutlineBubble(ctx);
+      break;
+    case 6:
+      ctx.beginPath();
+      ctx.moveTo(x + 48, y);
+      ctx.lineTo(x + width - 75, y);
+      ctx.lineTo(x + width, y + 72);
+      ctx.lineTo(x + width, y + height - 55);
+      ctx.lineTo(x + width - 58, y + height);
+      ctx.lineTo(x + width * .36, y + height);
+      ctx.lineTo(x + width * .22, y + height + Math.min(58, height * .13));
+      ctx.lineTo(x + width * .25, y + height);
+      ctx.lineTo(x + 58, y + height);
+      ctx.lineTo(x, y + height - 62);
+      ctx.lineTo(x, y + 52);
+      ctx.closePath();
+      fillAndOutlineBubble(ctx);
+      break;
+    default:
+      ctx.beginPath();
+      ctx.moveTo(x + width * .7, y + height * .79);
+      ctx.quadraticCurveTo(x + width * .79, y + height + 12, x + width * .86, y + height + 15);
+      ctx.quadraticCurveTo(x + width * .8, y + height * .89, x + width * .68, y + height * .87);
+      ctx.closePath();
+      fillAndOutlineBubble(ctx);
+      traceSmoothBlob(ctx, x, y, width, height, 11, .13);
+      fillAndOutlineBubble(ctx);
+      break;
+  }
+  ctx.restore();
+}
+
+function drawMultiBubble(ctx, entry, bubbleIndex, x, y, width, height, columns) {
+  ctx.save();
+  ctx.translate(x + width / 2, y + height / 2);
+  ctx.rotate(entry.tilt);
+  ctx.translate(-(x + width / 2), -(y + height / 2));
+  drawMultiBubbleShape(ctx, bubbleIndex, x, y, width, height);
+
+  const photoRadius = columns === 1 ? Math.min(245, height * .25) : Math.min(150, height * .28);
+  const photoSide = columns === 2
+    ? (x < MULTI_MONIES_WIDTH / 2 ? 'left' : 'right')
+    : (bubbleIndex % 2 === 0 ? 'left' : 'right');
+  const photoCenterX = photoSide === 'left' ? x + 8 : x + width - 8;
+  const photoCenterY = y + height / 2;
+  drawMultiParticipantPhoto(ctx, entry, photoCenterX, photoCenterY, photoRadius);
+
+  const horizontalInsetRatios = [.05, .2, .13, .18, .08, .1, .11, .15];
+  const verticalInsetRatios = [.08, .17, .13, .18, .1, .12, .12, .15];
+  const shapeInsetX = width * horizontalInsetRatios[bubbleIndex];
+  const shapeInsetY = height * verticalInsetRatios[bubbleIndex];
+  const photoSafeLeft = photoSide === 'left' ? x + photoRadius + 78 : x + 58;
+  const photoSafeRight = photoSide === 'left' ? x + width - 58 : x + width - photoRadius - 78;
+  const safeLeft = Math.max(photoSafeLeft, x + shapeInsetX);
+  const safeRight = Math.min(photoSafeRight, x + width - shapeInsetX);
+  const safeTop = y + shapeInsetY;
+  const safeBottom = y + height - shapeInsetY;
+  const safeWidth = Math.max(180, safeRight - safeLeft);
+  const safeHeight = Math.max(180, safeBottom - safeTop);
+  const attributionHeight = Math.min(118, safeHeight * .34);
+  const dividerY = safeBottom - attributionHeight;
+  const commentTop = safeTop + 16;
+  const commentBottom = dividerY - 22;
+  const commentHeight = Math.max(75, commentBottom - commentTop);
+  const maxCommentSize = columns === 1 ? 55 : 34;
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const quoteSize = columns === 1 ? 56 : 34;
+  const quoteReserve = quoteSize * 1.5;
+  const commentTextWidth = Math.max(140, safeWidth - quoteReserve - 24);
+  const commentFit = fitCompleteTextBlock(ctx, entry.comment, commentTextWidth, commentHeight, maxCommentSize, 'Arial, Helvetica, sans-serif', 400, 1.2);
+  const commentBlockHeight = commentFit.lines.length * commentFit.lineHeight;
+  const commentCenterX = (safeLeft + safeRight) / 2;
+  const firstLineY = commentTop + (commentHeight - commentBlockHeight) / 2 + commentFit.lineHeight / 2;
+  let commentY = firstLineY;
+  ctx.fillStyle = '#15161a';
+  ctx.font = `400 ${commentFit.size}px Arial, Helvetica, sans-serif`;
+  commentFit.lines.forEach((line) => {
+    ctx.fillText(line, commentCenterX, commentY, commentTextWidth);
+    commentY += commentFit.lineHeight;
+  });
+
+  const firstLine = commentFit.lines[0] || '';
+  const lastLine = commentFit.lines.at(-1) || '';
+  const lastLineY = firstLineY + Math.max(0, commentFit.lines.length - 1) * commentFit.lineHeight;
+  ctx.font = `400 ${commentFit.size}px Arial, Helvetica, sans-serif`;
+  const firstLineWidth = Math.min(ctx.measureText(firstLine).width, commentTextWidth);
+  const lastLineWidth = Math.min(ctx.measureText(lastLine).width, commentTextWidth);
+  ctx.fillStyle = '#772432';
+  ctx.font = `800 ${quoteSize}px Georgia, serif`;
+  const quoteWidth = Math.max(ctx.measureText('“').width, ctx.measureText('”').width);
+  const quoteGap = Math.max(3, commentFit.size * .12);
+  const openingQuoteX = Math.max(
+    safeLeft + quoteWidth / 2 + 4,
+    commentCenterX - firstLineWidth / 2 - quoteGap - quoteWidth / 2,
+  );
+  const closingQuoteX = Math.min(
+    safeRight - quoteWidth / 2 - 4,
+    commentCenterX + lastLineWidth / 2 + quoteGap + quoteWidth / 2,
+  );
+  const quoteLift = Math.min(quoteSize * .12, commentFit.lineHeight * .12);
+  ctx.fillText('“', openingQuoteX, firstLineY - quoteLift);
+  ctx.fillText('”', closingQuoteX, lastLineY - quoteLift);
+
+  ctx.strokeStyle = '#F2DF74';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  const dividerWidth = Math.min(150, safeWidth * .27);
+  ctx.moveTo(commentCenterX - dividerWidth / 2, dividerY);
+  ctx.lineTo(commentCenterX + dividerWidth / 2, dividerY);
+  ctx.stroke();
+
+  const nameFit = fitLines(ctx, entry.name.toUpperCase(), safeWidth - 20, 1, columns === 1 ? 43 : 31, 17, 'Arial, sans-serif', 800);
+  ctx.fillStyle = '#004165';
+  ctx.font = `800 ${nameFit.size}px Arial, sans-serif`;
+  ctx.fillText(nameFit.lines[0] || '', commentCenterX, dividerY + attributionHeight * .38, safeWidth - 20);
+
+  const roleFit = fitLines(ctx, entry.designation, safeWidth - 20, 1, columns === 1 ? 28 : 21, 13, 'Arial, sans-serif', 400);
+  ctx.fillStyle = '#15161a';
+  ctx.font = `400 ${roleFit.size}px Arial, sans-serif`;
+  ctx.fillText(roleFit.lines[0] || '', commentCenterX, dividerY + attributionHeight * .74, safeWidth - 20);
+  ctx.restore();
+  ctx.restore();
+}
+
+function renderMultiMonies() {
+  multiMoniesCtx.clearRect(0, 0, MULTI_MONIES_WIDTH, MULTI_MONIES_HEIGHT);
+  drawMultiMoniesBackground(multiMoniesCtx);
+  drawMultiMoniesHeader(multiMoniesCtx);
+
+  const columns = multiBubbleCount <= 2 ? 1 : 2;
+  const rows = Math.ceil(multiBubbleCount / columns);
+  const horizontalMargin = columns === 1 ? 285 : 170;
+  const columnGap = 110;
+  const rowGap = 72;
+  const contentTop = 780;
+  const contentBottom = 2930;
+  const cardWidth = columns === 1
+    ? MULTI_MONIES_WIDTH - horizontalMargin * 2
+    : (MULTI_MONIES_WIDTH - horizontalMargin * 2 - columnGap) / 2;
+  const cardHeight = (contentBottom - contentTop - rowGap * (rows - 1)) / rows;
+
+  multiEntries.slice(0, multiBubbleCount).forEach((entry, index) => {
+    const row = Math.floor(index / columns);
+    const column = index % columns;
+    const isUnpairedLastCard = columns === 2 && index === multiBubbleCount - 1 && multiBubbleCount % 2 === 1;
+    const x = isUnpairedLastCard
+      ? (MULTI_MONIES_WIDTH - cardWidth) / 2
+      : horizontalMargin + column * (cardWidth + columnGap);
+    const y = contentTop + row * (cardHeight + rowGap);
+    drawMultiBubble(multiMoniesCtx, entry, index, x, y, cardWidth, cardHeight, columns);
+  });
+
+  multiMoniesCtx.save();
+  multiMoniesCtx.fillStyle = '#fff';
+  multiMoniesCtx.font = '800 58px Arial, sans-serif';
+  drawLetterSpacedText(multiMoniesCtx, 'CGD TEAM', 2160, 3095, 4);
+  multiMoniesCtx.fillStyle = '#F2DF74';
+  multiMoniesCtx.font = '800 41px Arial, sans-serif';
+  drawLetterSpacedText(multiMoniesCtx, 'DISTRICT 86', 2190, 3160, 4);
+  multiMoniesCtx.font = '800 29px Arial, sans-serif';
+  drawLetterSpacedText(multiMoniesCtx, '2026-2027', 2190, 3212, 3);
+  multiMoniesCtx.restore();
+}
+
+function multiEditorMarkup(entry, index, isOpen) {
+  const number = index + 1;
+  return `
+    <details class="speaker-editor" data-speaker="${index}"${isOpen ? ' open' : ''}>
+      <summary><span>Participant ${number}</span><small>Photo, story and attribution</small></summary>
+      <div class="speaker-editor-body">
+        <div class="field-group">
+          <div class="label-row"><label for="multi-photo-${index}">Participant photo</label><span class="optional-label">Required · JPG, PNG or WebP</span></div>
+          <label class="photo-picker compact-photo-picker" for="multi-photo-${index}">
+            <span class="photo-picker-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 16.5V19h16v-2.5M12 4v10m0-10 4 4m-4-4L8 8"/></svg></span>
+            <span><strong id="multi-photo-title-${index}">${entry.image ? 'Change portrait' : 'Choose a portrait'}</strong><small id="multi-photo-name-${index}">${escapeHtml(entry.fileName || 'Centred and cropped to a circle.')}</small></span>
+          </label>
+          <input class="visually-hidden" id="multi-photo-${index}" type="file" accept="image/png,image/jpeg,image/webp">
+          <div class="photo-tools" id="multi-photo-tools-${index}"${entry.image ? '' : ' hidden'}>
+            <label for="multi-zoom-${index}">Photo zoom</label><input id="multi-zoom-${index}" type="range" min="100" max="190" value="${entry.zoom}" aria-label="Participant ${number} photo zoom"><button class="text-button" id="multi-remove-${index}" type="button">Remove</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="label-row"><label for="multi-comment-${index}">Testimonial</label><span class="counter" id="multi-comment-counter-${index}">${entry.comment.length} / 260</span></div>
+          <textarea id="multi-comment-${index}" maxlength="260" required>${escapeHtml(entry.comment)}</textarea>
+          <p class="field-hint">All 260 characters are fitted into this participant’s bubble.</p>
+        </div>
+        <div class="field-group">
+          <div class="label-row"><label for="multi-name-${index}">Participant name</label><span class="counter">${entry.name.length} / 45</span></div>
+          <input id="multi-name-${index}" type="text" maxlength="45" value="${escapeHtml(entry.name)}" required>
+        </div>
+        <div class="field-group">
+          <div class="label-row"><label for="multi-designation-${index}">Designation / role</label><span class="counter">${entry.designation.length} / 65</span></div>
+          <input id="multi-designation-${index}" type="text" maxlength="65" value="${escapeHtml(entry.designation)}" required>
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function clearMultiPhoto(index) {
+  const entry = multiEntries[index];
+  if (entry.imageUrl) URL.revokeObjectURL(entry.imageUrl);
+  entry.imageUrl = '';
+  entry.fileName = '';
+  entry.image = null;
+  entry.zoom = 100;
+  const fileInput = document.querySelector(`#multi-photo-${index}`);
+  if (fileInput) fileInput.value = '';
+  const tools = document.querySelector(`#multi-photo-tools-${index}`);
+  if (tools) tools.hidden = true;
+  const title = document.querySelector(`#multi-photo-title-${index}`);
+  const fileName = document.querySelector(`#multi-photo-name-${index}`);
+  if (title) title.textContent = 'Choose a portrait';
+  if (fileName) fileName.textContent = 'Centred and cropped to a circle.';
+  renderMultiMonies();
+}
+
+function renderMultiEditors() {
+  const container = document.querySelector('#speaker-editors');
+  const previouslyOpen = new Set(
+    [...container.querySelectorAll('details[open]')].map((details) => Number(details.dataset.speaker)),
+  );
+  container.innerHTML = multiEntries
+    .slice(0, multiBubbleCount)
+    .map((entry, index) => multiEditorMarkup(entry, index, previouslyOpen.has(index) || (previouslyOpen.size === 0 && index === 0)))
+    .join('');
+
+  multiEntries.slice(0, multiBubbleCount).forEach((entry, index) => {
+    const comment = document.querySelector(`#multi-comment-${index}`);
+    const name = document.querySelector(`#multi-name-${index}`);
+    const designation = document.querySelector(`#multi-designation-${index}`);
+    const zoom = document.querySelector(`#multi-zoom-${index}`);
+    const photo = document.querySelector(`#multi-photo-${index}`);
+
+    comment.addEventListener('input', () => {
+      entry.comment = comment.value;
+      const counter = document.querySelector(`#multi-comment-counter-${index}`);
+      counter.textContent = `${comment.value.length} / 260`;
+      counter.classList.toggle('near-limit', comment.value.length >= 221);
+      renderMultiMonies();
+    });
+    name.addEventListener('input', () => { entry.name = name.value; name.closest('.field-group').querySelector('.counter').textContent = `${name.value.length} / 45`; renderMultiMonies(); });
+    designation.addEventListener('input', () => { entry.designation = designation.value; designation.closest('.field-group').querySelector('.counter').textContent = `${designation.value.length} / 65`; renderMultiMonies(); });
+    zoom.addEventListener('input', () => { entry.zoom = Number(zoom.value); renderMultiMonies(); });
+    document.querySelector(`#multi-remove-${index}`).addEventListener('click', () => clearMultiPhoto(index));
+
+    photo.addEventListener('change', () => {
+      const [file] = photo.files;
+      if (!file) return;
+      if (entry.imageUrl) URL.revokeObjectURL(entry.imageUrl);
+      entry.imageUrl = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        entry.image = image;
+        entry.fileName = file.name;
+        document.querySelector(`#multi-photo-tools-${index}`).hidden = false;
+        document.querySelector(`#multi-photo-title-${index}`).textContent = 'Change portrait';
+        document.querySelector(`#multi-photo-name-${index}`).textContent = file.name;
+        renderMultiMonies();
+      };
+      image.onerror = () => {
+        clearMultiPhoto(index);
+        showToast('That image could not be opened. Please try another file.');
+      };
+      image.src = entry.imageUrl;
+    });
+  });
 }
 
 function updateCounter(input, field) {
@@ -564,6 +1129,7 @@ function switchFlyer(nextFlyer) {
   document.querySelectorAll('[data-view]').forEach((view) => { view.hidden = view.dataset.view !== nextFlyer; });
   if (nextFlyer === 'testimonial') renderTestimonial();
   if (nextFlyer === 'certificate') renderCertificate();
+  if (nextFlyer === 'multi-monies') renderMultiMonies();
 }
 
 function closeTestimonialGate() {
@@ -574,7 +1140,7 @@ function closeTestimonialGate() {
 }
 
 function requestFlyer(nextFlyer) {
-  if (!PROTECTED_FLYERS.has(nextFlyer) || protectedFlyersUnlocked) {
+  if (!PROTECTED_FLYERS.has(nextFlyer) || unlockedProtectedFlyers.has(nextFlyer)) {
     switchFlyer(nextFlyer);
     return;
   }
@@ -582,7 +1148,7 @@ function requestFlyer(nextFlyer) {
   pendingFlyer = nextFlyer;
   const gate = document.querySelector('#testimonial-gate');
   const passwordInput = document.querySelector('#testimonial-password');
-  const flyerLabel = nextFlyer === 'certificate' ? 'Certificates' : 'Testimonials';
+  const flyerLabel = nextFlyer === 'certificate' ? 'Certificates' : nextFlyer === 'multi-monies' ? 'Multi Monies' : 'Testimonials';
   document.querySelector('#gate-title').textContent = `Unlock ${flyerLabel}`;
   document.querySelector('#gate-description').textContent = `Enter the password to open the ${flyerLabel.toLowerCase()} editor.`;
   gate.hidden = false;
@@ -595,6 +1161,7 @@ function requestFlyer(nextFlyer) {
 bindFields(openHouseFields, renderOpenHouse);
 bindFields(testimonialFields, renderTestimonial);
 bindFields(certificateFields, renderCertificate);
+renderMultiEditors();
 
 document.querySelectorAll('[data-tab]').forEach((tab) => {
   tab.addEventListener('click', () => requestFlyer(tab.dataset.tab));
@@ -606,15 +1173,21 @@ document.querySelectorAll('[data-tab]').forEach((tab) => {
     const direction = event.key === 'ArrowRight' ? 1 : -1;
     const next = tabs[(currentIndex + direction + tabs.length) % tabs.length].dataset.tab;
     requestFlyer(next);
-    if (!PROTECTED_FLYERS.has(next) || protectedFlyersUnlocked) document.querySelector(`[data-tab="${next}"]`).focus();
+    if (!PROTECTED_FLYERS.has(next) || unlockedProtectedFlyers.has(next)) document.querySelector(`[data-tab="${next}"]`).focus();
   });
 });
 
 document.querySelector('#testimonial-gate-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const passwordInput = document.querySelector('#testimonial-password');
-  if (passwordInput.value === TESTIMONIAL_PASSWORD) {
-    protectedFlyersUnlocked = true;
+  const expectedPassword = pendingFlyer === 'multi-monies' ? MULTI_MONIES_PASSWORD : TESTIMONIAL_PASSWORD;
+  if (passwordInput.value === expectedPassword) {
+    if (pendingFlyer === 'multi-monies') {
+      unlockedProtectedFlyers.add('multi-monies');
+    } else {
+      unlockedProtectedFlyers.add('testimonial');
+      unlockedProtectedFlyers.add('certificate');
+    }
     const unlockedFlyer = pendingFlyer;
     closeTestimonialGate();
     switchFlyer(unlockedFlyer);
@@ -650,6 +1223,7 @@ openHouseTemplate.src = OPEN_HOUSE_TEMPLATE_URL;
 toastmastersLogo.onload = () => {
   toastmastersLogoReady = true;
   renderTestimonial();
+  renderMultiMonies();
 };
 
 toastmastersLogo.onerror = () => {
@@ -695,8 +1269,44 @@ document.querySelector('#certificate-form').addEventListener('submit', (event) =
   downloadCanvas(certificateCanvas, `${slugify(document.querySelector('#certificateName').value, 'participant')}-toastimonies-certificate.png`, 'Your certificate has been downloaded.');
 });
 
+document.querySelector('#multi-monies-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!event.currentTarget.reportValidity()) return;
+  const missingPhotoIndex = multiEntries.slice(0, multiBubbleCount).findIndex((entry) => !entry.image);
+  if (missingPhotoIndex !== -1) {
+    const editor = document.querySelector(`[data-speaker="${missingPhotoIndex}"]`);
+    const picker = editor.querySelector('.photo-picker');
+    editor.open = true;
+    picker.classList.add('has-error');
+    picker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => picker.classList.remove('has-error'), 2600);
+    showToast(`Add a photo for Participant ${missingPhotoIndex + 1} before downloading.`);
+    return;
+  }
+  renderMultiMonies();
+  downloadCanvas(multiMoniesCanvas, 'multi-monies-us-letter.png', 'Your Multi Monies flyer has been downloaded.');
+});
+
 document.querySelector('#open-house-reset').addEventListener('click', () => resetFields(openHouseFields, openHouseInitial, renderOpenHouse));
 document.querySelector('#certificate-reset').addEventListener('click', () => resetFields(certificateFields, certificateInitial, renderCertificate));
+
+document.querySelector('#bubble-count').addEventListener('change', (event) => {
+  multiBubbleCount = Number(event.target.value);
+  renderMultiEditors();
+  renderMultiMonies();
+});
+
+document.querySelector('#multi-monies-reset').addEventListener('click', () => {
+  multiEntries.forEach((entry) => {
+    if (entry.imageUrl) URL.revokeObjectURL(entry.imageUrl);
+  });
+  multiEntries = createMultiEntries();
+  multiBubbleCount = 2;
+  document.querySelector('#bubble-count').value = '2';
+  renderMultiEditors();
+  renderMultiMonies();
+  document.querySelector('#bubble-count').focus();
+});
 
 function clearParticipantPhoto() {
   if (participantImageUrl) URL.revokeObjectURL(participantImageUrl);
@@ -739,3 +1349,4 @@ document.querySelector('#photo-zoom').addEventListener('input', renderTestimonia
 document.querySelector('#remove-photo').addEventListener('click', clearParticipantPhoto);
 
 renderTestimonial();
+renderMultiMonies();

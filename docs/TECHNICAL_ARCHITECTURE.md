@@ -1,24 +1,28 @@
-# Toastmasters Flyer Studio: Implementation and Technical Architecture
+# Toastmasters Flyer Studio: Technical Architecture
 
 ## 1. Purpose and scope
 
-Toastmasters Flyer Studio is a browser-based tool for adding club and event information to a fixed Toastmasters open-house flyer template. A user enters four values—club name, date, time, and location—and receives an immediate preview that can be downloaded as a 1003 × 1568 PNG.
+Toastmasters Flyer Studio is a static browser application for producing four personalized Toastmasters assets:
 
-The application is intentionally client-only. It has no application server, database, user accounts, analytics integration, or upload API. The template image, user interface, text layout, image composition, and PNG export all run in the visitor's browser. This keeps deployment simple and prevents the entered event details from being sent to an application backend.
+- an Open House flyer;
+- a single-participant Testimonials graphic;
+- a Certificate of Appreciation; and
+- a Multi Monies U.S. Letter composition containing one to eight participant stories.
+
+The application has no backend, database, upload API, analytics integration, or user-account system. Forms, uploaded portraits, canvas composition, and PNG export remain in the visitor's browser. Refreshing the page clears edited values, uploaded images, and password-unlock state.
 
 ## 2. Technology stack
 
 | Layer | Technology | Responsibility |
 | --- | --- | --- |
-| Document shell | HTML5 | Metadata, viewport configuration, application mount point, and JavaScript entry point |
-| Application logic | Vanilla JavaScript using ES modules | UI generation, event handling, text fitting, canvas rendering, validation, reset, and download |
-| Flyer rendering | Canvas 2D API | Composes the template and personalized text into one raster image |
-| Presentation | CSS3 | Layout, colors, responsive behavior, interaction states, loading state, and accessibility preferences |
-| Development/build | Vite 7 | Local development server and optimized production build |
-| Package management | npm | Locks and installs the Vite development dependency |
-| Hosting | Vercel-compatible static hosting | Runs the Vite build and serves the generated `dist` directory |
+| Document shell | HTML5 | Metadata, viewport configuration, application mount point |
+| Application | Vanilla JavaScript ES modules | Markup generation, state, events, validation, password gates, rendering, export |
+| Graphics | Canvas 2D API | Template compositing, vector decoration, image cropping, text fitting |
+| Presentation | CSS3 | Responsive layout, tabs, forms, accordions, modal, loading and focus states |
+| Development | Vite 7 | Development server and optimized static build |
+| Hosting | Vercel-compatible static hosting | Serves the generated `dist` directory |
 
-There are no runtime JavaScript dependencies. Vite is used only during development and build.
+There are no runtime JavaScript packages. Vite is the only development dependency.
 
 ## 3. Repository structure
 
@@ -29,7 +33,9 @@ EditableFlyerOpenHouse/
 ├── package-lock.json
 ├── vercel.json
 ├── public/
-│   └── toastmasters-open-house-template.png
+│   ├── toastmasters-open-house-template.png
+│   ├── toastmasters-international-logo.png
+│   └── toastimonies-certificate-template.png
 ├── src/
 │   ├── main.js
 │   └── styles.css
@@ -37,256 +43,265 @@ EditableFlyerOpenHouse/
     └── TECHNICAL_ARCHITECTURE.md
 ```
 
-- `index.html` is the Vite entry document. It provides SEO/browser metadata, an empty `#app` mount element, and loads `/src/main.js` as an ES module.
-- `src/main.js` contains the entire application behavior and dynamically builds the page markup.
-- `src/styles.css` defines the visual design and responsive layout.
-- `public/toastmasters-open-house-template.png` is copied unchanged to the root of the production build and used as the canvas background.
-- `vercel.json` tells Vercel to run `npm run build` and publish `dist`.
-- `dist` and `node_modules` are generated locally and excluded from version control.
+- `src/main.js` generates the interface and contains all render and interaction logic.
+- `src/styles.css` contains the responsive application design.
+- `public/toastmasters-open-house-template.png` is the fixed Open House background.
+- `public/toastmasters-international-logo.png` is the supplied transparent official logo used by Testimonials and Multi Monies.
+- `public/toastimonies-certificate-template.png` is the supplied certificate, including both original signatures.
 
-## 4. High-level architecture
+## 4. Editor and output matrix
+
+| Tab | Canvas | Editable data | Access |
+| --- | ---: | --- | --- |
+| Open House (`01`) | 1003 × 1568 | Club, date, time, location | Open |
+| Testimonials (`02`) | 1254 × 1254 | Portrait, zoom, testimonial, name, designation | `aurie26retention` |
+| Certificates (`03`) | 1463 × 1075 | Participant name only | `aurie26retention` |
+| Multi Monies (`04`) | 2550 × 3300 | Count plus portrait, zoom, testimonial, name, and designation per participant | `chrismonies` |
+
+Testimonials and Certificates share an unlock group. Entering `aurie26retention` in either gate unlocks both for the current page lifetime. Multi Monies is independently unlocked with `chrismonies`.
+
+## 5. High-level data flow
 
 ```mermaid
 flowchart LR
-    User[User input] --> Form[DOM form fields]
-    Form --> State[valuesFromForm]
-    State --> Layout[Text fitting and wrapping]
-    Template[Static PNG template] --> Canvas[Canvas 2D context]
-    Layout --> Canvas
-    Canvas --> Preview[Responsive live preview]
-    Canvas --> Export[toDataURL PNG export]
+    Tabs[Four editor tabs] --> Gate{Protected?}
+    Gate -->|No| Editor[Selected editor]
+    Gate -->|Correct password| Editor
+    Editor --> State[DOM fields or Multi Monies state]
+    Upload[Local image files] --> Memory[Object URLs and Image objects]
+    Memory --> Canvas
+    State --> Fit[Text wrapping and fitting]
+    Assets[Same-origin PNG assets] --> Canvas[Canvas 2D renderer]
+    Fit --> Canvas
+    Canvas --> Preview[Responsive preview]
+    Canvas --> Export[PNG data URL]
     Export --> Download[Browser download]
 ```
 
-The DOM form is the source of truth for current user input. There is no separate state-management layer. Every input event reads the form values and redraws the canvas. This is appropriate for the current four-field interface and keeps state synchronization straightforward.
+The Open House, Testimonials, and Certificate editors read current values from DOM controls. Multi Monies maintains an eight-entry in-memory array because its visible controls are rebuilt when the selected bubble count changes.
 
-The visible canvas and the exported image are the same canvas element. CSS scales it to fit the preview panel, while its intrinsic pixel dimensions remain fixed at 1003 × 1568. Consequently, the downloaded file retains the full configured resolution regardless of the screen size used to edit it.
+## 6. Initialization and navigation
 
-## 5. Application initialization
+`main.js` writes the complete application markup into `#app`, then caches all canvas contexts and creates `Image` objects for static assets. Each tab uses `role="tab"`; each view uses `role="tabpanel"`. Mouse clicks and Left/Right arrow keys route through `requestFlyer()`.
 
-`src/main.js` starts by importing the stylesheet and defining three central configuration groups:
+`switchFlyer()` performs three operations:
 
-1. `TEMPLATE_URL`, `FLYER_WIDTH`, and `FLYER_HEIGHT` define the template path and output dimensions.
-2. `initialValues` supplies the form's initial example content and the reset target.
-3. `fields` defines each editable field's ID, label, maximum length, hint, and placeholder.
+1. updates active-tab classes, `aria-selected`, and keyboard tab stops;
+2. shows only the matching panel; and
+3. redraws the selected canvas.
 
-The application then assigns a complete UI template to `document.querySelector('#app').innerHTML`. The generated markup includes:
+The number badges are identifiers rather than workflow-step numbers: both panels in a view display that view's tab number.
 
-- a header and introductory section;
-- the event details form;
-- character counters and field guidance;
-- download and reset controls;
-- a live-preview panel containing the canvas;
-- loading and error states for the template image;
-- a non-blocking download confirmation toast; and
-- semantic and accessibility attributes such as labels, `aria-describedby`, `aria-live`, and an accessible canvas description.
+## 7. Password-gate behavior
 
-After the markup is mounted, the code caches references to the canvas, its 2D rendering context, the form, and the loading indicator. It also creates an `Image` object for loading the flyer template.
+Protected tabs open an accessible modal dialog before their panel is shown. The dialog supports Submit, Cancel, backdrop dismissal, and Escape. Incorrect values display inline feedback and retain focus in the password field.
 
-## 6. Runtime data flow
+Unlock state is held in the in-memory `unlockedProtectedFlyers` set. It is not written to cookies, local storage, or session storage and therefore resets on refresh.
 
-### 6.1 Template loading
+### Security limitation
 
-The template is requested from `/toastmasters-open-house-template.png`. Vite serves files in `public` from the site root in both development and production.
+The passwords are constants in client-delivered JavaScript. Minification does not make them secret. This mechanism deters casual access but is not authentication. Real access control requires server-side verification, protected routes/assets, and an authenticated session.
 
-While the image loads, the canvas is transparent and a preparation message is shown. The image's `load` event sets `templateReady`, hides the loading state, fades in the canvas, and triggers the first render. If loading fails, the UI replaces the spinner with an error message and does not attempt an export.
+## 8. Text measurement and fitting
 
-The `templateReady` guard prevents drawing or downloading an incomplete flyer.
+### `wrapText(ctx, content, maxWidth)`
 
-### 6.2 Form input
+The wrapper uses `measureText()` to assemble whitespace-delimited lines. Words wider than the available width are split at character boundaries to prevent horizontal overflow.
 
-Each field has a native `maxlength` constraint and is required. On every `input` event, the application:
+### `fitLines(...)`
 
-1. updates the field's current-length counter;
-2. highlights the counter after it reaches 85% of the maximum; and
-3. calls `renderFlyer()` to update the preview.
+This routine decreases the font size until text fits a configured width and line count. If the configured hard minimum is reached, it limits the output and appends an ellipsis. It is used for compact metadata such as names, roles, and Open House details.
 
-`valuesFromForm()` reads the current values directly from the DOM and trims leading and trailing whitespace. This means the preview always reflects the fields as displayed, without maintaining duplicate application state.
+### `fitCompleteTextBlock(...)`
 
-### 6.3 Canvas render pipeline
+Testimonials must not be truncated. This routine decreases font size until every wrapped line fits a specified width and height. It never adds an ellipsis. It is used for:
 
-Every completed render follows the same deterministic sequence:
+- the 220-character Testimonials message; and
+- every 260-character Multi Monies participant message.
 
-1. Clear all 1003 × 1568 pixels with `clearRect`.
-2. Draw the original template across the complete canvas.
-3. Draw the club name in the central name area.
-4. Draw the date, time, and location in their configured detail areas.
+The available text height ends above the gold divider, preserving separation from attribution content.
 
-Canvas state changes are enclosed in `save()` and `restore()` calls. This prevents properties such as alignment, color, font, stroke, and shadow from leaking from one drawing operation into another.
+## 9. Open House renderer
 
-## 7. Text wrapping and automatic fitting
+The Open House canvas draws the supplied 1003 × 1568 template first, then overlays four fields:
 
-Text fitting is handled by two reusable functions.
+| Field | Width | Lines | Preferred size | Normal minimum |
+| --- | ---: | ---: | ---: | ---: |
+| Club | 770 px | 3 | 66 px | 34 px |
+| Date | 455 px | 2 | 32 px | 22 px |
+| Time | 455 px | 2 | 34 px | 23 px |
+| Location | 420 px | 2 | 31 px | 21 px |
 
-### 7.1 `wrapAtCurrentSize(content, maxWidth)`
+The club name is centered; the remaining fields are left-aligned in template-specific safe areas.
 
-This function assumes the canvas context already has the intended font. It splits content on whitespace and builds lines word by word, using `ctx.measureText()` to test each candidate line against the allowed width.
+## 10. Testimonials renderer
 
-If a single word is wider than the available area, the function falls back to character-level splitting. This prevents unusually long unbroken input from overflowing the flyer.
+Testimonials is a square 1254 × 1254 composition. Its vector background, speech card, participant photo frame, quote marks, text, attribution, district footer, and logo lockup are redrawn on every input event.
 
-### 7.2 `fitLines(...)`
+The participant portrait is loaded through a temporary object URL, centre-cropped to a square, clipped to a circle, and scaled using the zoom slider. Removing or replacing a portrait revokes the previous object URL.
 
-`fitLines` repeatedly calls the wrapping function while decreasing the font size one pixel at a time. It begins at the configured preferred size and returns as soon as the wrapped content fits within the permitted number of lines.
+The layout supports:
 
-If the content still does not fit at the hard minimum size, the function:
+- a 220-character complete testimonial;
+- a name of up to 45 characters across at most two lines;
+- a designation of up to 65 characters across at most two lines; and
+- dynamic spacing between the name and designation.
 
-1. keeps only the permitted number of lines;
-2. shortens the last visible line one character at a time; and
-3. appends an ellipsis that fits within the width.
+Only brand color constants and the `MONIES` title highlight were changed when the official palette was applied; the established layout and behavior remain unchanged.
 
-The effective hard minimum is `min(12, configuredMinFontSize)`, so the algorithm can shrink below the normal design minimum as a final overflow defense. In normal use, field-level character limits make this fallback uncommon.
+## 11. Certificate renderer
 
-### 7.3 Flyer placement rules
+The certificate uses the supplied 1463 × 1075 PNG as its complete background. This preserves borders, logos, wording, names, and signatures exactly as supplied.
 
-All personalized content is converted to uppercase before it is drawn.
+To personalize it, the renderer:
 
-| Element | Horizontal placement | Vertical center | Width | Lines | Preferred size | Design minimum |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Club name | Centered at canvas midpoint | 546 px | 770 px | 3 | 66 px | 34 px |
-| Date | Starts at x = 444 px | 797 px | 455 px | 2 | 32 px | 22 px |
-| Time | Starts at x = 444 px | 943 px | 455 px | 2 | 34 px | 23 px |
-| Location | Starts at x = 480 px | 1088 px | 420 px | 2 | 31 px | 21 px |
+1. draws the full source image;
+2. stretches a clean strip of the source paper texture over only the placeholder-name area; and
+3. centers the uppercase participant name in that cleared region.
 
-The club name uses centered alignment, a light shadow for contrast against the template, and a decorative gold line with a red center point. Detail fields use left alignment. Each text block is vertically centered around its configured `centerY`, based on its calculated font size, line height, and line count.
+No signature coordinates are painted over or reconstructed. The only editable value is the recipient name, limited to 50 characters.
 
-The coordinates are template-specific. Replacing the background with artwork that has different safe areas requires recalibrating these placement values.
+## 12. Multi Monies renderer
 
-## 8. PNG download behavior
+Multi Monies exports a 2550 × 3300 portrait PNG. Those dimensions have the 8.5 × 11 U.S. Letter aspect ratio at 300 pixels per inch. The application tab is called Multi Monies, but the artwork heading remains `TOASTIMONIES` to match the single-participant output.
 
-The Download PNG button submits the form. Its handler prevents page navigation and calls native form validation through `reportValidity()`. If the fields are valid and the template is ready, the application performs one final render and then:
+Both branded story outputs keep `MONIES` in True Maroon and add a proportional Happy Yellow canvas stroke plus a low-opacity yellow blur. Testimonials uses a 3 px stroke and 10 px blur; Multi Monies uses a 5 px stroke and 18 px blur for its larger canvas.
 
-1. converts the canvas to a PNG data URL using `canvas.toDataURL('image/png')`;
-2. creates a temporary anchor element;
-3. assigns the data URL to the anchor's `href`;
-4. creates a filename from the club name; and
-5. programmatically clicks the anchor to invoke the browser download.
+### Dynamic participant editors
 
-The filename is normalized to lowercase ASCII letters and numbers separated by hyphens. If normalization produces an empty name, the fallback is `toastmasters-club-open-house.png`.
+The count selector accepts values from 1 through 8. `renderMultiEditors()` creates one collapsible editor per selected participant. Each editor contains:
 
-After the download starts, an `aria-live` toast is displayed for 2.8 seconds. No file is uploaded to a server during this process.
+- required PNG, JPEG, or WebP portrait upload;
+- portrait zoom from 100% to 190%;
+- testimonial text limited to 260 characters;
+- participant name limited to 45 characters; and
+- designation limited to 65 characters.
 
-## 9. Reset behavior
+Reducing the visible count does not immediately destroy higher-index participant state. Increasing it again restores those entries. Reset revokes all image URLs and returns to two default bubbles.
 
-Reset restores each input from `initialValues`, refreshes every counter, redraws the canvas, and returns keyboard focus to the club-name field. It uses a button with `type="button"`, so it does not invoke form submission or browser-native reset behavior.
+### Bubble layout
 
-## 10. Responsive and accessible presentation
+- One or two bubbles use one full-width column.
+- Three through eight bubbles use two columns.
+- Row count is calculated with `ceil(count / columns)`.
+- Card height is derived from the fixed content region after subtracting row gaps.
+- An unpaired bubble in an odd final row is centered.
 
-The CSS uses a two-column workspace on large screens, with a sticky editing panel and a flexible preview. At 800 pixels or below, the preview moves above the editor and both occupy a single column. Additional adjustments at 480 pixels optimize spacing, typography, buttons, and metadata for narrow screens.
+Each bubble reproduces the Testimonials visual language: white speech shape, attached circular portrait, maroon quotation marks, complete fitted comment, Happy Yellow divider, Loyal Blue participant name, and role.
 
-The canvas keeps its intrinsic dimensions but uses `width: 100%` and `height: auto`, preserving its aspect ratio while scaling visually.
+The eight positions deliberately use eight different silhouettes. `drawMultiBubbleShape()` maps each zero-based participant index to a rounded speech bubble, oval, thought cloud, comic burst, side-tail card, shield bubble, angular chat bubble, or organic blob. The mapping is stable as count changes, so no active position duplicates another. Shape-specific horizontal and vertical safe-area ratios keep all content inside irregular edges. Testimonial lines, divider, name, and role are center-aligned; the complete testimonial block is vertically centered above the divider. The opening and closing maroon quotation marks are positioned from the measured widths and baselines of the first and last rendered testimonial lines, keeping both marks inside the safe text area. Portrait placement alternates or moves to the outside edge of two-column layouts.
 
-Accessibility-related implementation includes:
+Speech tails are painted first and overlapped by their parent bubble body so the shared seam disappears, while thought-cloud dots begin at the cloud edge and remain grouped tightly. One-column and two-column layouts use enlarged horizontal margins so the rotated bubble, portrait border, and visible artwork retain at least a small print-safe inset from both canvas edges.
 
-- associated labels and hints for all inputs;
-- native required-field and maximum-length behavior;
-- a visible keyboard focus state;
-- status announcements via `role="status"` and `aria-live="polite"`;
-- meaningful section headings and landmarks;
-- decorative content hidden from assistive technology; and
-- a `prefers-reduced-motion` rule that effectively disables animations and transitions.
+Every entry receives a random tilt between approximately 0.45 and 1.3 degrees in either direction. The angle is created with the entry, remains stable across input renders and count changes, and is regenerated on reset. The bubble shape, portrait, and content share one canvas rotation around the card center, preserving their visual association while avoiding layout jitter.
 
-The canvas has an accessible label, but the personalized flyer itself is raster content. If the generated image is distributed on the web, accompanying text or alt text should be provided by the publishing platform.
+### Portrait lifecycle
 
-## 11. Build and deployment architecture
+Each entry owns its `Image`, object URL, filename, and zoom value. Replacement and removal revoke the prior object URL. All portrait processing remains local. Before export, the form checks every active entry and blocks the download if a portrait is missing; it opens and scrolls to the first incomplete participant editor.
 
-### Local development
+## 13. Official brand palette
+
+Testimonials and Multi Monies use the official colors documented in the [Toastmasters International Brand Manual](https://content.toastmasters.org/image/upload/02330-001-0001-brand-manual.pdf):
+
+| Name | Hex | RGB | Usage |
+| --- | --- | --- | --- |
+| Loyal Blue | `#004165` | 0, 65, 101 | Main background and participant names |
+| True Maroon | `#772432` | 119, 36, 50 | Lower background, headings, quotation marks |
+| Cool Gray | `#A9B2B1` | 169, 178, 177 | Subtle dot texture and neutral accents |
+| Happy Yellow | `#F2DF74` | 242, 223, 116 | Dividers, outlines, and highlighted footer text |
+
+White and near-black remain supporting text and card colors.
+
+## 14. PNG export
+
+Each form performs native validation, triggers one final render, converts its canvas using `toDataURL('image/png')`, and programmatically clicks a temporary download link.
+
+| Output | Filename pattern |
+| --- | --- |
+| Open House | `{club}-open-house.png` |
+| Testimonials | `{participant}-testimonial.png` |
+| Certificate | `{participant}-toastimonies-certificate.png` |
+| Multi Monies | `multi-monies-us-letter.png` |
+
+The visible preview is CSS-scaled, but the downloaded PNG retains the canvas's intrinsic dimensions.
+
+Canvas PNG output does not explicitly include physical DPI metadata. For a physical U.S. Letter print, configure print or layout software to 8.5 × 11 inches; 2550 × 3300 pixels then corresponds to 300 PPI.
+
+## 15. Responsive and accessible behavior
+
+Large screens use a two-column editor/preview workspace. At 800 px and below, the preview moves above the form. Four tabs use a responsive grid that changes from four columns to two on narrow screens.
+
+Accessibility support includes:
+
+- labeled inputs, hints, counters, and native limits;
+- keyboard-operated tabs;
+- semantic `details` accordions for Multi Monies participants;
+- accessible modal semantics and focus handling;
+- `aria-live` status/error messages;
+- visible focus styles; and
+- reduced-motion support.
+
+Canvas output is raster content. Publishing platforms should provide equivalent alt text alongside downloaded graphics.
+
+## 16. Privacy characteristics
+
+- Form values remain in DOM or JavaScript memory.
+- Portraits remain local and use browser object URLs.
+- Rendering and export are local Canvas operations.
+- No user content is transmitted, persisted, or logged by the application.
+- Same-origin assets keep canvases exportable; cross-origin images without appropriate CORS headers would taint a canvas.
+
+## 17. Build and deployment
 
 ```bash
 npm install
 npm run dev
-```
-
-Vite serves the source with fast module loading and development-time updates.
-
-### Production build
-
-```bash
 npm run build
+npm run preview
 ```
 
-Vite processes `index.html`, bundles and minifies the JavaScript and CSS, fingerprints generated assets, and writes the static site to `dist`. The PNG from `public` is copied to the distribution root without being bundled into JavaScript.
-
-### Vercel deployment
-
-`vercel.json` declares Vite as the framework, `npm run build` as the build command, and `dist` as the output directory. The deployed system is therefore a static-site architecture:
+Vite writes the optimized site to `dist`. Files in `public` are copied to the distribution root. `vercel.json` configures Vercel to run the build and serve `dist`; no serverless function is required.
 
 ```mermaid
 flowchart LR
-    Repo[GitHub repository] --> Build[Vercel build: npm run build]
-    Build --> Static[Static dist output]
-    Static --> CDN[Vercel CDN]
+    Repo[Repository] --> Build[Vite production build]
+    Build --> Dist[Static dist directory]
+    Dist --> CDN[Static host or Vercel CDN]
     CDN --> Browser[Visitor browser]
-    Browser --> Local[Local canvas rendering and PNG export]
+    Browser --> Canvas[Local Canvas rendering]
+    Canvas --> PNG[Local PNG download]
 ```
 
-There are no serverless functions or backend routes. A generic static host can deploy the same `dist` output if it preserves the site's root-relative asset paths.
+## 18. Current limitations
 
-## 12. Privacy and security characteristics
+- Canvas coordinates are template-specific and not driven by a general template schema.
+- Hardcoded client-side passwords are discoverable and provide no real authorization boundary.
+- System fallback fonts can have slightly different metrics across browsers and operating systems.
+- Portrait cropping is centered; users can zoom but cannot independently pan horizontally or vertically.
+- Export uses data URLs, which consume more temporary memory than Blob-based export—especially for the 2550 × 3300 canvas.
+- PNG files have exact pixel dimensions but no guaranteed embedded DPI metadata.
+- There is no automated browser test suite; validation uses syntax checks, production builds, and manual visual review.
 
-- Event values remain in the page's DOM and in browser memory.
-- Flyer composition and export happen locally through the Canvas API.
-- No storage, cookies, authentication tokens, or application API calls are implemented.
-- The application does not persist data across refreshes.
-- User input is read from input values and passed to `fillText`; it is not inserted into the page as executable HTML.
-- The fixed, same-origin template avoids cross-origin canvas restrictions. Loading the template from an external origin without correct CORS headers could taint the canvas and prevent `toDataURL()` export.
+## 19. Verification checklist
 
-Static hosting should still use normal platform protections such as HTTPS and appropriate security headers. If analytics, remote templates, or saved projects are added later, the current statement that no event data leaves the browser must be revisited.
+Before deployment:
 
-## 13. Current limitations and design tradeoffs
+1. Run `node --check src/main.js`.
+2. Run `npm run build`.
+3. Confirm all three PNG assets load from the production preview.
+4. Verify tab identifiers `01` through `04` in both editor and preview headings.
+5. Test valid and invalid values for both password groups.
+6. Verify Testimonials displays all 220 characters without an ellipsis.
+7. Test Multi Monies counts 1 through 8 and confirm the same number of editor accordions and canvas bubbles.
+8. Enter 260 characters in every visible Multi Monies comment and confirm complete rendering.
+9. Confirm Multi Monies blocks export until all selected participants have portraits; then upload, zoom, replace, and remove portraits in several entries.
+10. Select eight participants and confirm all eight bubble silhouettes are visibly different and the artwork heading reads `TOASTIMONIES`.
+11. Confirm long comments remain horizontally and vertically centered within every irregular bubble at all counts, then reset and verify that subtle tilt angles change without causing collisions.
+12. Download every output and verify intrinsic dimensions.
+13. Confirm certificate signatures match the supplied template pixel-for-pixel outside the participant-name replacement region.
+14. Test desktop, tablet, mobile, keyboard navigation, and reduced-motion behavior.
+15. Confirm the browser network panel sends no form or portrait data.
 
-- The template and drawing coordinates are tightly coupled. There is no generic template schema.
-- The project uses fallback system fonts rather than bundled web fonts, so exact glyph metrics can vary slightly by operating system and browser.
-- The Canvas 2D text algorithm is optimized for whitespace-delimited languages and does not implement advanced shaping, hyphenation, or bidirectional layout.
-- PNG export uses a data URL, which is simple at this image size but consumes more temporary memory than a Blob-based export.
-- The user cannot reposition, restyle, or resize individual fields manually.
-- There is no automated test suite; current verification relies on the Vite production build and manual browser checks.
-- The output has fixed pixel dimensions but does not embed a print DPI requirement. Print size and quality depend on the target workflow.
+## 20. Extension guidance
 
-These are reasonable tradeoffs for a focused, single-template tool. If the application expands to multiple templates or user-controlled layouts, the rendering configuration should move from hard-coded functions into a validated template schema.
-
-## 14. Recommended extension points
-
-### Add or change a field
-
-Update `initialValues` and `fields`, then add its drawing call in `renderFlyer()`. If the field has a new visual region, define its width, vertical center, line limit, and font-size bounds against the template's pixel coordinate system.
-
-### Support multiple templates
-
-Introduce a template configuration object containing:
-
-- asset URL and intrinsic dimensions;
-- field definitions and limits;
-- placement, alignment, color, and typography rules; and
-- optional decorative drawing instructions.
-
-The selected configuration can then drive both form generation and rendering.
-
-### Improve font consistency
-
-Bundle licensed web fonts, wait for `document.fonts.ready`, and render only after the required faces are loaded. This would make `measureText()` and output layout more consistent across platforms.
-
-### Add project persistence
-
-For browser-only persistence, store field values in `localStorage` with a clear reset/delete option. Cross-device saved projects would require a backend, identity model, data-retention policy, and updated privacy messaging.
-
-### Improve export scalability
-
-Use `canvas.toBlob()` with `URL.createObjectURL()` for more memory-efficient downloads, especially if future templates use substantially larger canvases.
-
-## 15. Verification checklist
-
-Before deployment, verify the following:
-
-1. Run `npm run build` successfully.
-2. Open the production preview with `npm run preview`.
-3. Confirm the template loads without console or network errors.
-4. Test empty required fields and maximum-length values.
-5. Test long words to confirm wrapping and ellipsis behavior.
-6. Download a flyer and confirm its dimensions are exactly 1003 × 1568 pixels.
-7. Compare preview and downloaded text placement.
-8. Test desktop and mobile layouts, keyboard navigation, and reduced-motion mode.
-9. Confirm no event details are transmitted in the browser's network panel.
-
-## 16. Summary
-
-Toastmasters Flyer Studio uses a compact static-web architecture. The DOM collects event data, a deterministic Canvas 2D pipeline composites that data over a fixed template, and the browser exports the result directly as PNG. Vite packages the application for static hosting, while Vercel serves the resulting files. The absence of a backend minimizes operational complexity and supports the application's central privacy property: personalization stays in the visitor's browser.
+If more templates are added, move field definitions, output dimensions, placement rules, passwords, and asset URLs into validated configuration objects. If true access control becomes necessary, place protected functionality and assets behind server-side authentication. If canvas sizes grow further, replace `toDataURL()` with `toBlob()` and object URLs to reduce memory pressure.
